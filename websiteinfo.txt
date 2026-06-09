@@ -1,0 +1,332 @@
+================================================================================
+WEBSITE FEATURE DOCUMENTATION
+URL: https://system-design-simulator-iota.vercel.app/
+Title: SystemSim — System Design Simulator
+Status: Beta
+Documented: 2026-06-08
+================================================================================
+
+--------------------------------------------------------------------------------
+1. META / PAGE-LEVEL
+--------------------------------------------------------------------------------
+- Page title:       "SystemSim — System Design Simulator"
+- Meta description: "Interactive system design interview simulator with real-time
+                     load testing and scoring"
+- Theme color:      #09090b (near-black, dark UI)
+- Viewport:         width=device-width, initial-scale=1, maximum-scale=1,
+                    viewport-fit=cover
+  → maximum-scale=1 disables user pinch-to-zoom (intentional for canvas UX)
+- Deployment:       Vercel (vercel.app)
+- Build tag:        "beta" label visible in header
+
+--------------------------------------------------------------------------------
+2. HEADER / TOP BAR
+--------------------------------------------------------------------------------
+Brand / Logo:
+  - "SystemSim" wordmark with "beta" badge immediately after
+
+Primary Action Buttons (left-to-right in top bar):
+  1. URL Shortener    — sets/identifies the active problem (default loaded problem)
+  2. Reference        — opens a sample/reference solution for the active problem
+  3. Add Note         — adds an annotation note onto the canvas
+  4. Practice Interview — launches a timed 6-phase mock interview mode
+  5. Save             — saves the current canvas state (persistence mechanism TBD)
+  6. Load             — loads a previously saved canvas state
+  7. Simulate         — triggers load simulation / real-time load testing
+  8. Score            — scores the current architecture against interview rubric
+  9. Buy me a coffee  — external donation/support link (likely Ko-fi or similar)
+
+Navigation Tabs (secondary nav, below or alongside header):
+  - Components        — shows the component sidebar (default active)
+  - Problems          — shows the list of 35 real interview questions/problems
+  - Learn             — educational/reference content (exact content not loaded)
+
+--------------------------------------------------------------------------------
+3. LEFT SIDEBAR — COMPONENT PANEL
+--------------------------------------------------------------------------------
+Top action:
+  - "Create custom component" — allows users to define and add a custom node
+    to the canvas with a user-specified name/label and throughput capacity.
+
+Component Categories (5 groups) with individual components and their
+associated throughput/capacity numbers (RPS or ops/sec displayed as label):
+
+  NETWORKING (7 components):
+    - DNS                   100k
+    - CDN                   500k
+    - Load Balancer         1000k
+    - API Gateway           50k
+    - Rate Limiter          80k
+    - Reverse Proxy         100k
+    - Origin Shield         200k
+
+  COMPUTE (7 components):
+    - App Server            5k
+    - Auth Service          10k
+    - WebSocket Server      50k
+    - Task Scheduler        10k
+    - Stream Processor      200k
+    - Notification Service  50k
+    - Custom Component      50k
+
+  STORAGE (11 components):
+    - SQL Database          10k
+    - NoSQL Database        50k
+    - Cache / Redis         100k
+    - Object Storage        25k
+    - Search / ES           20k   (Elasticsearch)
+    - Graph Database        8k
+    - Time-Series DB        100k
+    - Data Warehouse        1k
+    - File Store            10k
+    - Vector Database       10k
+    - Geospatial Index      50k
+
+  MESSAGING (2 components):
+    - Message Queue         100k
+    - Pub/Sub               200k
+
+  INFRASTRUCTURE (9 components):
+    - Service Mesh          80k
+    - Monitoring            500k
+    - Service Discovery     50k
+    - Distributed Lock      10k
+    - Circuit Breaker       100k
+    - Coordination Service  20k
+    - ID Generator          500k
+    - Sharded Counter       500k
+    - Config Service        50k
+
+Total component types available: 36 (+ custom component creation)
+
+Interaction:
+  - Components are draggable from the sidebar onto the canvas (drag-and-drop)
+  - The number next to each component name is its default throughput capacity
+    (used in simulation calculations)
+
+--------------------------------------------------------------------------------
+4. CANVAS (MAIN WORK AREA)
+--------------------------------------------------------------------------------
+Overview:
+  - Infinite/pannable canvas for building system architecture diagrams
+  - Built on top of a graph/flow library (likely ReactFlow based on repo context)
+  - Supports node placement, edge drawing, and selection
+
+Node Interactions:
+  - Drag from sidebar to place a component node on the canvas
+  - Click a node to select it → opens Props panel on the right
+  - Press Enter or Space to select a node via keyboard
+  - Arrow keys to move a selected node around the canvas
+  - Press Delete to remove a selected node
+  - Press Escape to cancel current selection/action
+
+Edge (Connection) Interactions:
+  - Draw edges between nodes to represent data flow / dependencies
+  - Press Enter or Space to select an edge
+  - Press Delete to remove a selected edge
+  - Press Escape to cancel
+
+Mini Map:
+  - A mini-map overlay is shown on the canvas for navigation on large diagrams
+
+Keyboard Shortcuts:
+  - ⌘E (Cmd+E)         → Export diagram
+  - ⌘↵ (Cmd+Enter)     → Simulate (trigger load simulation)
+
+Empty State / Onboarding Hero Text:
+  - Headline: "Build an architecture that scales"
+  - Subtext: "Pick a problem, drop infrastructure components onto the canvas,
+              and get scored the way an interviewer would evaluate you."
+  - CTA pills:
+      → "Pick a problem — 35 real interview questions"
+      → "Load reference — Open a sample solution"
+      → "Practice interview — Timed 6-phase mock"
+  - Hint text: "Drag from the sidebar · ⌘E export · ⌘↵ simulate"
+
+--------------------------------------------------------------------------------
+5. RIGHT PANEL — TABBED INSPECTOR
+--------------------------------------------------------------------------------
+Tabs available:
+  1. Props          — component property editor (shown when node is selected)
+  2. Simulate       — simulation controls and output
+  3. Score          — scoring/evaluation panel
+  4. Capacity       — capacity planning view
+  5. Trade-offs     — trade-off analysis for the current architecture
+
+Props Tab (when NO component is selected):
+  - Message: "No component selected"
+  - Subtext: "Click a component or edge on the canvas to edit its properties."
+
+Props Tab (when a component IS selected):
+  - Editable properties of the selected node (name, throughput, config, etc.)
+  - Exact fields depend on component type (not fully revealed without interaction)
+
+Requirements Panel (visible for active problem — URL Shortener default):
+  Header: "Requirements — URL Shortener"
+  Metrics displayed:
+    - Reads/sec:    100,000
+    - Writes/sec:   1,000
+    - Storage:      500 GB
+    - Latency SLA:  < 100ms
+    - Users:        100M DAU
+  
+  Constraints section (collapsed by default, showing 2 of N):
+    - "Short URLs should be unique and non-predictable (base62 or base58 encoding)"
+    - "Redirect latency < 100ms at p99 — users should not notice any delay"
+    - "System should handle 100:1 read/write ratio"
+    - "Show 4 more" → toggle to reveal remaining constraints
+
+  Hints section (progressive disclosure):
+    - "Start with the basics"
+    - "Think about reads"
+    - "Scaling writes"
+    - "Advanced: Key generation"
+    (Hints appear collapsible/expandable, likely to avoid spoilers)
+
+--------------------------------------------------------------------------------
+6. PROBLEMS PANEL (Tab: Problems)
+--------------------------------------------------------------------------------
+- Contains 35 real interview questions / system design problems
+- Default active problem: URL Shortener
+- Problems panel (full list not fetched; 35 problems total)
+- Clicking a problem likely:
+    → Sets the active problem
+    → Loads the Requirements panel with relevant metrics
+    → Optionally loads a reference solution if "Reference" is clicked
+
+--------------------------------------------------------------------------------
+7. PRACTICE INTERVIEW MODE
+--------------------------------------------------------------------------------
+- Triggered via "Practice Interview" button in header
+- Described as: "Timed 6-phase mock"
+- 6 phases (exact phase names not revealed in static fetch; likely follows
+  standard SD interview structure):
+    Phase 1: Requirements clarification
+    Phase 2: Capacity estimation
+    Phase 3: High-level design
+    Phase 4: Detailed design
+    Phase 5: Trade-off discussion
+    Phase 6: Bottleneck identification / scaling discussion
+- Timer-based: each phase is time-boxed (duration unknown without interaction)
+- Scoring at end of each phase or overall
+
+--------------------------------------------------------------------------------
+8. SIMULATION FEATURE
+--------------------------------------------------------------------------------
+- Triggered via "Simulate" button in header or ⌘↵ keyboard shortcut
+- Described as "real-time load testing" in meta description
+- Simulates traffic flow against the designed architecture
+- Uses the throughput numbers (k ops/sec) of each component to model bottlenecks
+- Output visible in "Simulate" tab on the right panel
+
+--------------------------------------------------------------------------------
+9. SCORING FEATURE
+--------------------------------------------------------------------------------
+- Triggered via "Score" button in header or "Score" tab on right panel
+- Evaluates the architecture against:
+    → Requirements coverage (latency SLA, throughput, storage)
+    → Best practices (use of appropriate components)
+    → Likely rubric-based scoring similar to a real interviewer
+- Score visible in "Score" tab
+
+--------------------------------------------------------------------------------
+10. SAVE / LOAD
+--------------------------------------------------------------------------------
+- "Save" button: persists current canvas state (likely localStorage or
+  cloud-backed storage)
+- "Load" button: restores a previously saved state
+- Exact persistence mechanism (localStorage, server-side, URL-based) not
+  confirmed from static fetch
+
+--------------------------------------------------------------------------------
+11. REFERENCE FEATURE
+--------------------------------------------------------------------------------
+- "Reference" button in header
+- "Load reference — Open a sample solution" CTA on empty canvas
+- Loads a pre-built reference architecture for the active problem onto the canvas
+- Useful for comparing your design against an ideal solution
+
+--------------------------------------------------------------------------------
+12. ADD NOTE
+--------------------------------------------------------------------------------
+- "Add Note" button in header
+- Adds a free-text annotation node to the canvas
+- Allows documenting decisions, trade-offs, or labels on the diagram
+
+--------------------------------------------------------------------------------
+13. EXPORT
+--------------------------------------------------------------------------------
+- ⌘E keyboard shortcut triggers export
+- Export format not confirmed (likely PNG/SVG or JSON)
+
+--------------------------------------------------------------------------------
+14. CUSTOM COMPONENT
+--------------------------------------------------------------------------------
+- "Create custom component" action in sidebar
+- Allows users to define a component not in the default library
+- Likely prompts for: name, category, throughput capacity
+- Appears as a draggable node after creation (default capacity listed as 50k)
+
+--------------------------------------------------------------------------------
+15. LEARN TAB
+--------------------------------------------------------------------------------
+- Navigation tab: "Learn"
+- Content not retrieved in static fetch
+- Likely contains educational material: concept explanations, architectural
+  patterns, interview tips related to system design
+
+--------------------------------------------------------------------------------
+16. MINI MAP
+--------------------------------------------------------------------------------
+- Overlay navigation aid on the canvas
+- Shows a bird's-eye view of the full diagram
+- Allows clicking to pan to a specific area of a large canvas
+
+--------------------------------------------------------------------------------
+17. ACCESSIBILITY / KEYBOARD NAVIGATION
+--------------------------------------------------------------------------------
+- Full keyboard support for canvas interactions:
+    Space / Enter    → select node or edge
+    Arrow keys       → move selected node
+    Delete           → remove selected node or edge
+    Escape           → cancel/deselect
+    ⌘E               → export
+    ⌘↵               → simulate
+- Screen reader hint text present for node/edge selection
+
+--------------------------------------------------------------------------------
+18. RESPONSIVE BEHAVIOR
+--------------------------------------------------------------------------------
+- Viewport meta has maximum-scale=1, viewport-fit=cover
+  → Suggests mobile is considered but pinch-zoom is intentionally disabled
+  → Canvas likely degrades on small screens (canvas tools are inherently desktop-
+    centric; mobile experience may be limited to viewing only)
+- Dark theme (#09090b) applied at meta level — no light/dark toggle documented
+
+--------------------------------------------------------------------------------
+19. EXTERNAL LINKS / INTEGRATIONS
+--------------------------------------------------------------------------------
+- "Buy me a coffee" button → external donation link (Ko-fi or similar)
+- No OAuth, no login/signup detected in static fetch
+- No third-party analytics tags visible in fetched content
+- Deployed on Vercel (vercel.app infrastructure)
+
+--------------------------------------------------------------------------------
+20. KNOWN GAPS / NOT CONFIRMED
+--------------------------------------------------------------------------------
+The following require live browser interaction to fully document:
+  - Full list of 35 problems
+  - Exact 6 phases of Practice Interview mode and their timers
+  - Props panel fields per component type
+  - Simulation output format and metrics shown
+  - Score rubric breakdown (exact criteria and weights)
+  - Save/Load persistence mechanism (localStorage vs. cloud)
+  - Export format (PNG / SVG / JSON)
+  - Learn tab content
+  - Error messages and validation rules (e.g., invalid connections)
+  - Any modals/pop-ups triggered by actions
+  - Edge property editing fields
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================

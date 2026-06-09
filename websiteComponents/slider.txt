@@ -1,0 +1,243 @@
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure  
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles. 
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder
+Copy-paste this component to /components/ui folder:
+```tsx
+slider.tsx
+"use client"
+
+import * as React from "react"
+import {
+  Slider as AriaSlider,
+  SliderOutput as AriaSliderOutput,
+  SliderOutputProps as AriaSliderOutputProps,
+  SliderProps as AriaSliderProps,
+  SliderStateContext as AriaSliderStateContext,
+  SliderThumb as AriaSliderThumb,
+  SliderThumbProps as AriaSliderThumbProps,
+  SliderTrack as AriaSliderTrack,
+  SliderTrackProps as AriaSliderTrackProps,
+  composeRenderProps,
+} from "react-aria-components"
+
+import { cn } from "@/lib/utils"
+
+import { labelVariants } from "@/components/ui/field"
+
+const SliderOutput = ({ className, ...props }: AriaSliderOutputProps) => (
+  <AriaSliderOutput className={cn(labelVariants(), className)} {...props} />
+)
+
+const Slider = ({
+  className,
+  orientation = "horizontal",
+  ...props
+}: AriaSliderProps) => (
+  <AriaSlider
+    className={composeRenderProps(className, (className) =>
+      cn(
+        "relative flex touch-none select-none items-center",
+        {
+          "h-full": orientation === "vertical",
+          "w-full": orientation === "horizontal",
+        },
+        className
+      )
+    )}
+    orientation={orientation}
+    {...props}
+  />
+)
+
+const SliderTrack = ({ className, ...props }: AriaSliderTrackProps) => (
+  <AriaSliderTrack
+    className={composeRenderProps(className, (className, renderProps) =>
+      cn(
+        {
+          "h-2 w-full": renderProps.orientation === "horizontal",
+          "h-full w-2": renderProps.orientation === "vertical",
+        },
+        "relative grow rounded-full bg-secondary",
+        /* Disabled */
+        "data-[disabled]:opacity-50",
+        className
+      )
+    )}
+    {...props}
+  />
+)
+
+const SliderFillTrack = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => {
+  let state = React.useContext(AriaSliderStateContext)!
+  const orientation = state.orientation === "vertical" ? "height" : "width"
+  return (
+    <div
+      style={{ [orientation]: state.getThumbPercent(0) * 100 + "%" }}
+      className={cn(
+        "absolute rounded-full bg-primary",
+        {
+          "h-full": state.orientation === "horizontal",
+          "w-full bottom-0": state.orientation === "vertical",
+        },
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+const SliderThumb = ({ className }: AriaSliderThumbProps) => (
+  <AriaSliderThumb
+    className={composeRenderProps(className, (className) =>
+      cn(
+        "left-1/2 top-1/2 block size-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors",
+        /* Disabled */
+        "data-[disabled]:pointer-events-none",
+        /* Focus Visible */
+        "data-[focus-visible]:outline-none data-[focus-visible]:ring-2 data-[focus-visible]:ring-ring data-[focus-visible]:ring-offset-2",
+        className
+      )
+    )}
+  />
+)
+
+export { Slider, SliderTrack, SliderFillTrack, SliderThumb, SliderOutput }
+
+
+demo.tsx
+import { Label } from "@/components/ui/field"
+import {
+  Slider,
+  SliderFillTrack,
+  SliderOutput,
+  SliderThumb,
+  SliderTrack,
+} from "@/components/ui/slider"
+
+export function SliderDemo() {
+  return (
+    <Slider defaultValue={30} className="flex w-1/5 flex-col items-start gap-2">
+      <div className="flex w-full justify-between">
+        <Label>Opacity</Label>
+        <SliderOutput />
+      </div>
+      <SliderTrack>
+        <SliderFillTrack />
+        <SliderThumb />
+      </SliderTrack>
+    </Slider>
+  )
+}
+
+```
+
+Copy-paste these files for dependencies:
+```tsx
+jolbol1/field
+"use client"
+
+import { cva, type VariantProps } from "class-variance-authority"
+import {
+  FieldError as AriaFieldError,
+  FieldErrorProps as AriaFieldErrorProps,
+  Group as AriaGroup,
+  GroupProps as AriaGroupProps,
+  Label as AriaLabel,
+  LabelProps as AriaLabelProps,
+  Text as AriaText,
+  TextProps as AriaTextProps,
+  composeRenderProps,
+} from "react-aria-components"
+
+import { cn } from "@/lib/utils"
+
+const labelVariants = cva([
+  "text-sm font-medium leading-none",
+  /* Disabled */
+  "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-70",
+  /* Invalid */
+  "group-data-[invalid]:text-destructive",
+])
+
+const Label = ({ className, ...props }: AriaLabelProps) => (
+  <AriaLabel className={cn(labelVariants(), className)} {...props} />
+)
+
+function FormDescription({ className, ...props }: AriaTextProps) {
+  return (
+    <AriaText
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+      slot="description"
+    />
+  )
+}
+
+function FieldError({ className, ...props }: AriaFieldErrorProps) {
+  return (
+    <AriaFieldError
+      className={cn("text-sm font-medium text-destructive", className)}
+      {...props}
+    />
+  )
+}
+
+const fieldGroupVariants = cva("", {
+  variants: {
+    variant: {
+      default: [
+        "relative flex h-10 w-full items-center overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+        /* Focus Within */
+        "data-[focus-within]:outline-none data-[focus-within]:ring-2 data-[focus-within]:ring-ring data-[focus-within]:ring-offset-2",
+        /* Disabled */
+        "data-[disabled]:opacity-50",
+      ],
+      ghost: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+})
+
+interface GroupProps
+  extends AriaGroupProps,
+    VariantProps<typeof fieldGroupVariants> {}
+
+function FieldGroup({ className, variant, ...props }: GroupProps) {
+  return (
+    <AriaGroup
+      className={composeRenderProps(className, (className) =>
+        cn(fieldGroupVariants({ variant }), className)
+      )}
+      {...props}
+    />
+  )
+}
+
+export {
+  Label,
+  labelVariants,
+  FieldGroup,
+  fieldGroupVariants,
+  FieldError,
+  FormDescription,
+}
+
+```
+
+Install NPM dependencies:
+```bash
+react-aria-components, class-variance-authority
+```
