@@ -1,0 +1,13 @@
+services:
+  website:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app                 # mount source — edits reflect instantly
+      - /app/node_modules      # keep container's node_modules, don't overwrite with host's
+    environment:
+      - WATCHPACK_POLLING=true # reliable file-watch inside Docker
+    restart: unless-stopped
