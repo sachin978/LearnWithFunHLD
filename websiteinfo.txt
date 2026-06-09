@@ -1,9 +1,5 @@
 ================================================================================
 WEBSITE FEATURE DOCUMENTATION
-URL: https://system-design-simulator-iota.vercel.app/
-Title: SystemSim — System Design Simulator
-Status: Beta
-Documented: 2026-06-08
 ================================================================================
 
 --------------------------------------------------------------------------------
