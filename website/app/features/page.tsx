@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion, type Variants, type Easing } from "framer-motion";
+import { SiteFooter } from "@/components/ui/site-footer";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -219,7 +220,7 @@ export default function FeaturesPage() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-white font-bold text-lg">
-            SystemSim
+            WireUp System
             <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
               beta
             </span>
@@ -251,7 +252,7 @@ export default function FeaturesPage() {
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-5">
             Everything inside<br />
             <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 bg-clip-text text-transparent">
-              SystemSim
+              WireUp System
             </span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto mb-8">
@@ -653,7 +654,7 @@ export default function FeaturesPage() {
               rel="noopener noreferrer"
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-10 rounded-xl transition hover:scale-105 text-lg"
             >
-              Launch SystemSim →
+              Launch WireUp System →
             </a>
             <Link
               href="/"
@@ -665,6 +666,7 @@ export default function FeaturesPage() {
         </motion.div>
       </section>
 
+      <SiteFooter />
     </div>
   );
 }

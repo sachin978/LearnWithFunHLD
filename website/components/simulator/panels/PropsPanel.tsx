@@ -87,7 +87,7 @@ export default function PropsPanel() {
                 type={type}
                 value={String((selectedNode.data as NodeData)[key] ?? "")}
                 onChange={(e) => updateNodeData(selectedNode.id, { [key]: type === "number" ? Number(e.target.value) : e.target.value })}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-indigo-500"
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40"
                 min={type === "number" ? 1 : undefined}
               />
             </div>
@@ -98,7 +98,7 @@ export default function PropsPanel() {
               value={String((selectedNode.data as NodeData).notes ?? "")}
               onChange={(e) => updateNodeData(selectedNode.id, { notes: e.target.value })}
               rows={3}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-indigo-500 resize-none"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40 resize-none"
               placeholder="Add design notes…"
             />
           </div>

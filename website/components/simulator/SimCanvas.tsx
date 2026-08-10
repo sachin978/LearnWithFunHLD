@@ -1,14 +1,15 @@
 "use client";
 import { useCallback, useRef } from "react";
+import { motion } from "framer-motion";
 import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   addEdge,
   useReactFlow,
   type Connection,
   type NodeTypes,
+  type OnMoveEnd,
   BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -23,10 +24,20 @@ let nodeIdCounter = Date.now();
 const newId = () => `node_${++nodeIdCounter}`;
 
 export default function SimCanvas() {
-  const { nodes, edges, setNodes, setEdges, setSelectedNodeId, setRightTab, deleteNode } =
+  const { nodes, edges, setNodes, setEdges, setSelectedNodeId, setRightTab, deleteNode, simTheme, viewport, setViewport } =
     useSimulatorStore();
+
+  const isLight = simTheme === "light";
   const { screenToFlowPosition } = useReactFlow();
   const canvasRef = useRef<HTMLDivElement>(null);
+  // Snapshot the viewport we had at mount — once the user has one saved, never
+  // auto-fit again so refreshes restore exactly where they left off.
+  const hadSavedViewport = useRef(viewport !== null);
+
+  const onMoveEnd = useCallback<OnMoveEnd>(
+    (_, vp) => setViewport({ x: vp.x, y: vp.y, zoom: vp.zoom }),
+    [setViewport],
+  );
 
   const onConnect = useCallback(
     (conn: Connection) => setEdges((eds) => addEdge({ ...conn, animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } }, eds)),
@@ -41,7 +52,7 @@ export default function SimCanvas() {
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const componentId = e.dataTransfer.getData("application/systemsim");
+      const componentId = e.dataTransfer.getData("application/wireup-system");
       if (!componentId) return;
       const def = COMPONENTS.find((c) => c.id === componentId);
       if (!def) return;
@@ -115,32 +126,42 @@ export default function SimCanvas() {
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
-        fitView
+        onMoveEnd={onMoveEnd}
+        {...(hadSavedViewport.current
+          ? { defaultViewport: viewport! }
+          : { fitView: true })}
         deleteKeyCode={null}
-        style={{ background: "#09090b" }}
+        proOptions={{ hideAttribution: true }}
+        style={{ background: isLight ? "#f8f8f8" : "#09090b" }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="#27272a" />
-        <Controls className="!bg-zinc-900 !border-zinc-700 [&_button]:!bg-zinc-800 [&_button]:!border-zinc-700 [&_button]:!text-white" />
-        <MiniMap
-          className="!bg-zinc-900 !border-zinc-700"
-          nodeColor={(n) => {
-            const d = n.data as NodeData;
-            const map: Record<string, string> = { indigo: "#6366f1", violet: "#8b5cf6", emerald: "#10b981", amber: "#f59e0b", rose: "#f43f5e" };
-            return map[d.color] ?? "#6366f1";
-          }}
-        />
+        <Background variant={BackgroundVariant.Dots} gap={28} size={1} color={isLight ? "#d4d4d8" : "#27272a"} />
+        <Controls className={isLight
+          ? "!bg-white !border-zinc-200 [&_button]:!bg-zinc-50 [&_button]:!border-zinc-200 [&_button]:!text-zinc-700"
+          : "!bg-zinc-900 !border-zinc-700 [&_button]:!bg-zinc-800 [&_button]:!border-zinc-700 [&_button]:!text-white"
+        } />
 
         {/* Empty state */}
         {nodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-            <div className="text-center">
-              <div className="text-5xl mb-4">🏗️</div>
-              <h3 className="text-white text-lg font-semibold mb-2">Build an architecture that scales</h3>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="text-center"
+            >
+              <motion.div
+                className="text-5xl mb-4"
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+              >
+                🏗️
+              </motion.div>
+              <h1 className="text-white text-base font-semibold mb-2">Build an architecture that scales</h1>
               <p className="text-zinc-500 text-sm max-w-xs">
                 Pick a problem from the left panel, then drag components onto the canvas and connect them.
               </p>
               <div className="mt-4 text-zinc-600 text-xs">Drag from sidebar · Delete to remove · Scroll to zoom</div>
-            </div>
+            </motion.div>
           </div>
         )}
       </ReactFlow>

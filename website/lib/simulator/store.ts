@@ -18,6 +18,12 @@ export interface NodeData extends Record<string, unknown> {
 
 export type LeftTab = "components" | "problems";
 export type RightTab = "props" | "simulate" | "score" | "capacity" | "tradeoffs";
+export type SimTheme = "dark" | "light";
+export interface CanvasViewport {
+  x: number;
+  y: number;
+  zoom: number;
+}
 
 interface SimulatorState {
   nodes: Node[];
@@ -31,6 +37,10 @@ interface SimulatorState {
   interviewActive: boolean;
   interviewPhase: number;     // 0-5
   interviewTimeLeft: number;  // seconds
+  simTheme: SimTheme;
+  leftPanelCollapsed: boolean;
+  rightPanelCollapsed: boolean;
+  viewport: CanvasViewport | null;
 
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
   setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void;
@@ -46,6 +56,10 @@ interface SimulatorState {
   setInterviewActive: (v: boolean) => void;
   setInterviewPhase: (p: number) => void;
   setInterviewTimeLeft: (s: number) => void;
+  setSimTheme: (t: SimTheme) => void;
+  setLeftPanelCollapsed: (v: boolean) => void;
+  setRightPanelCollapsed: (v: boolean) => void;
+  setViewport: (v: CanvasViewport) => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>()(
@@ -62,6 +76,10 @@ export const useSimulatorStore = create<SimulatorState>()(
       interviewActive: false,
       interviewPhase: 0,
       interviewTimeLeft: 600,
+      simTheme: "dark",
+      leftPanelCollapsed: false,
+      rightPanelCollapsed: false,
+      viewport: null,
 
       setNodes: (nodes) =>
         set((s) => ({ nodes: typeof nodes === "function" ? nodes(s.nodes) : nodes })),
@@ -86,11 +104,15 @@ export const useSimulatorStore = create<SimulatorState>()(
           selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
         })),
       clearCanvas: () =>
-        set({ nodes: [], edges: [], selectedNodeId: null, simulationResult: null, scoreResult: null }),
+        set({ nodes: [], edges: [], selectedNodeId: null, simulationResult: null, scoreResult: null, viewport: null }),
       setInterviewActive: (v) => set({ interviewActive: v }),
       setInterviewPhase: (p) => set({ interviewPhase: p }),
       setInterviewTimeLeft: (s) => set({ interviewTimeLeft: s }),
+      setSimTheme: (t) => set({ simTheme: t }),
+      setLeftPanelCollapsed: (v) => set({ leftPanelCollapsed: v }),
+      setRightPanelCollapsed: (v) => set({ rightPanelCollapsed: v }),
+      setViewport: (v) => set({ viewport: v }),
     }),
-    { name: "systemsim-canvas", partialize: (s) => ({ nodes: s.nodes, edges: s.edges, activeProblem: s.activeProblem }) },
+    { name: "wireup-system-canvas", partialize: (s) => ({ nodes: s.nodes, edges: s.edges, activeProblem: s.activeProblem, simTheme: s.simTheme, viewport: s.viewport }) },
   ),
 );

@@ -52,7 +52,7 @@ export const PulseBeams = ({
   return (
     <div
       className={cn(
-        "w-full h-screen relative flex items-center justify-center antialiased overflow-hidden",
+        "w-full min-h-screen relative flex items-center justify-center antialiased overflow-hidden py-20",
         className,
       )}
     >

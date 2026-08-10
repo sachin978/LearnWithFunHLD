@@ -49,3 +49,32 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/* ── Simulator light theme ─────────────────────────────────────────────────── */
+.sim-light { background-color: #ffffff; }
+
+.sim-light .bg-zinc-950 { background-color: #ffffff !important; }
+.sim-light .bg-zinc-900 { background-color: #f4f4f5 !important; }
+.sim-light .bg-zinc-800 { background-color: #e4e4e7 !important; }
+
+.sim-light .border-zinc-800 { border-color: #e4e4e7 !important; }
+.sim-light .border-zinc-700 { border-color: #d4d4d8 !important; }
+.sim-light .border-zinc-600 { border-color: #a1a1aa !important; }
+
+.sim-light .text-white  { color: #18181b !important; }
+.sim-light .text-zinc-300 { color: #3f3f46 !important; }
+.sim-light .text-zinc-400 { color: #52525b !important; }
+.sim-light .text-zinc-500 { color: #71717a !important; }
+.sim-light .text-zinc-600 { color: #71717a !important; }
+
+/* hover variants */
+.sim-light .hover\:bg-zinc-900:hover { background-color: #e4e4e7 !important; }
+.sim-light .hover\:border-zinc-600:hover { border-color: #a1a1aa !important; }
+.sim-light .hover\:text-white:hover { color: #18181b !important; }
+.sim-light .hover\:text-zinc-300:hover { color: #3f3f46 !important; }
+
+/* focus */
+.sim-light input, .sim-light textarea { color: #18181b !important; }
+
+/* modal backdrop */
+.sim-light .bg-black\/60 { background-color: rgba(0, 0, 0, 0.35) !important; }

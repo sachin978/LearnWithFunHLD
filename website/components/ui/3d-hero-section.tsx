@@ -2,7 +2,11 @@
 
 import React, { useEffect, useRef } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { ArrowRight, Rocket, Layers } from "lucide-react";
 import Spline from "@splinetool/react-spline";
+
+const MotionLink = motion(Link);
 
 function HeroSplineBackground() {
   return (
@@ -45,10 +49,6 @@ function HeroContent() {
   return (
     <div className="text-white px-4 max-w-screen-xl mx-auto w-full flex flex-col lg:flex-row justify-between items-start lg:items-center py-16">
       <div className="w-full lg:w-1/2 pr-0 lg:pr-8 mb-8 lg:mb-0">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 text-xs font-medium mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-          Beta — Now Live
-        </div>
         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 leading-tight tracking-tight">
           Build an<br />
           <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-300 bg-clip-text text-transparent">
@@ -66,22 +66,37 @@ function HeroContent() {
         <p className="text-base sm:text-lg opacity-75 mb-6 max-w-md leading-relaxed text-gray-300">
           Pick a problem, drop infrastructure components onto the canvas, simulate real load, and get scored the way an interviewer would evaluate you.
         </p>
-        <div className="flex pointer-events-auto flex-col sm:flex-row items-start gap-3">
-          <Link
-            href="/simulator"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-8 rounded-2xl transition duration-300 hover:scale-105 flex items-center justify-center gap-2 w-full sm:w-auto pointer-events-auto"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 4C11.4477 4 11 4.44772 11 5V11H5C4.44772 11 4 11.4477 4 12C4 12.5523 4.44772 13 5 13H11V19C11 19.5523 11.4477 20 12 20C12.5523 20 13 19.5523 13 19V13H19C19.5523 13 20 12.5523 20 12C20 11.4477 19.5523 11 19 11H13V5C13 4.44772 12.5523 4 12 4Z" />
-            </svg>
-            Start Designing
-          </Link>
-          <a
+        <div className="flex pointer-events-auto flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative w-full sm:w-auto pointer-events-auto">
+            {/* Pulsing attention glow — kept tight so it never reads as clickable space it isn't */}
+            <motion.span
+              className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 blur-sm pointer-events-none"
+              animate={{ opacity: [0.45, 0.8, 0.45] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <MotionLink
+              href="/simulator"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.96 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="group relative flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 text-white font-bold py-3 px-8 rounded-full w-full sm:w-auto pointer-events-auto shadow-xl shadow-indigo-950/60 ring-1 ring-white/20"
+            >
+              <Rocket size={17} className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-[20deg]" />
+              <span className="text-base">Start Designing</span>
+              <ArrowRight size={16} className="transition-transform duration-300 group-hover:translate-x-1" />
+            </MotionLink>
+          </div>
+
+          <motion.a
             href="#features"
-            className="border border-white/20 text-white font-semibold py-3 px-8 rounded-2xl transition duration-300 w-full sm:w-auto hover:bg-white/10 text-center"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="group flex items-center justify-center gap-2 border border-white/20 bg-white/5 backdrop-blur-sm text-white font-semibold py-3 px-8 rounded-full transition-colors duration-300 hover:border-indigo-400/70 hover:bg-white/10 w-full sm:w-auto text-center pointer-events-auto"
           >
-            See Features
-          </a>
+            <Layers size={16} className="text-indigo-300 transition-transform duration-300 group-hover:rotate-12" />
+            <span className="text-base">See Features</span>
+          </motion.a>
         </div>
         <p className="mt-4 text-xs text-gray-500">
           35 real interview questions · No login required

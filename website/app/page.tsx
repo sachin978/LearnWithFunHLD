@@ -1,49 +1,62 @@
 "use client";
-import { Home, Layers, BookOpen, Zap } from "lucide-react";
+import { Home, Layers, BookOpen, Zap, Map, Target, Clock, FileText } from "lucide-react";
+import { motion, type Variants, type Easing } from "framer-motion";
 import { Banner } from "@/components/ui/banner";
 import { NavBar } from "@/components/ui/tubelight-navbar";
 import { HeroSection } from "@/components/ui/3d-hero-section";
 import { PulseBeams } from "@/components/ui/pulse-beams";
-import { CinematicFooter } from "@/components/ui/motion-footer";
+import { MarqueeTicker } from "@/components/ui/marquee-ticker";
+import { SiteFooter } from "@/components/ui/site-footer";
 
 const navItems = [
   { name: "Home", url: "#", icon: Home },
   { name: "Features", url: "#features", icon: Layers },
 ];
 
+// ─── Animation helpers (matches /features page conventions) ─────────────────
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.07, duration: 0.5, ease: "easeOut" as Easing },
+  }),
+};
+
 const features = [
   {
-    icon: "🗺️",
+    icon: Map,
     title: "Infinite Canvas",
     description:
       "Drag-and-drop 36 infrastructure components — DNS, CDN, load balancers, databases, caches, queues — onto a pannable canvas and wire them together in seconds.",
   },
   {
-    icon: "⚡",
+    icon: Zap,
     title: "Real-Time Load Simulation",
     description:
       "Trigger load tests with ⌘↵ and watch throughput numbers cascade through your architecture. Spot bottlenecks before your interviewer does.",
   },
   {
-    icon: "🎯",
+    icon: Target,
     title: "Interview Scoring",
     description:
       "Get scored against a rubric that mirrors real system design interviews — coverage of latency SLAs, throughput targets, and architectural best practices.",
   },
   {
-    icon: "🕐",
+    icon: Clock,
     title: "Timed Mock Interviews",
     description:
       "Practice a full 6-phase timed mock: requirements, capacity estimation, high-level design, detailed design, trade-offs, and bottleneck analysis.",
   },
   {
-    icon: "📚",
+    icon: BookOpen,
     title: "35 Real Problems",
     description:
       "URL shortener, Twitter feed, Netflix CDN, Uber dispatch, WhatsApp, and 30 more real system design interview problems with reference solutions.",
   },
   {
-    icon: "📝",
+    icon: FileText,
     title: "Reference Solutions",
     description:
       "Load a pre-built sample architecture for any problem to compare your design against an ideal solution and learn what you missed.",
@@ -121,13 +134,16 @@ const beams = [
 export default function LandingPage() {
   return (
     <div className="relative w-full bg-background overflow-x-hidden">
+      {/* Scrolling ticker */}
+      <MarqueeTicker />
+
       {/* Announcement banner */}
       <Banner
-        id="systemsim-beta"
+        id="wireup-system-beta"
         variant="rainbow"
         className="text-white/90"
       >
-        🚀 SystemSim Beta is live — 35 real interview problems, load simulation & scoring.{" "}
+        🚀 WireUp System Beta is live — 35 real interview problems, load simulation & scoring.{" "}
         <a
           href="/simulator"
           target="_blank"
@@ -144,37 +160,6 @@ export default function LandingPage() {
       {/* 3D hero section */}
       <HeroSection />
 
-      {/* Features grid */}
-      <section id="features" className="relative z-10 bg-background py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 text-xs font-medium mb-4">
-              Everything you need
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-4">
-              Built for engineers,<br />
-              <span className="text-muted-foreground font-normal">by engineers</span>
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto text-lg">
-              SystemSim gives you all the tools to practice, learn, and nail your system design interview.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="group rounded-2xl border border-border bg-card p-6 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all duration-300"
-              >
-                <div className="text-3xl mb-4">{feature.icon}</div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Stats strip */}
       <section className="relative z-10 bg-card border-y border-border py-12 px-4">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -183,48 +168,59 @@ export default function LandingPage() {
             { value: "35", label: "Interview Problems" },
             { value: "6", label: "Interview Phases" },
             { value: "100k", label: "Max RPS Simulated" },
-          ].map((stat) => (
-            <div key={stat.label}>
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              custom={i}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+            >
               <div className="text-4xl font-bold text-white mb-1">{stat.value}</div>
               <div className="text-muted-foreground text-sm">{stat.label}</div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
 
-      {/* PulseBeams CTA section */}
-      <section className="relative z-10 bg-background">
+      {/* PulseBeams + features */}
+      <section id="features" className="relative z-10 bg-background pb-20">
         <PulseBeams
           beams={beams}
           className="bg-background"
           gradientColors={{ start: "#6366f1", middle: "#8b5cf6", end: "#a78bfa" }}
         >
-          <div className="flex flex-col items-center gap-6 text-center px-4">
-            <h2 className="text-3xl md:text-5xl font-bold text-white max-w-lg tracking-tight">
-              Stop guessing.<br />Start designing.
-            </h2>
-            <p className="text-muted-foreground max-w-md">
-              Open the canvas, pick a problem, and build your architecture — no sign-up required.
-            </p>
-            <a
-              href=""
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-slate-800 z-40 no-underline group cursor-pointer relative shadow-2xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6 text-white inline-block"
-            >
-              <span className="absolute inset-0 overflow-hidden rounded-full">
-                <span className="absolute inset-0 rounded-full bg-[image:radial-gradient(75%_100%_at_50%_0%,rgba(99,102,241,0.6)_0%,rgba(99,102,241,0)_75%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              </span>
-              <div className="relative flex items-center space-x-2 z-10 rounded-full bg-zinc-950 py-3 px-8 ring-1 ring-white/10">
-                <span className="text-base">Open SystemSim →</span>
-              </div>
-            </a>
+          <div className="flex flex-col items-center gap-10 px-4 w-full max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+              {features.map((feature, i) => {
+                const Icon = feature.icon;
+                return (
+                  <motion.div
+                    key={feature.title}
+                    custom={i}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    variants={fadeUp}
+                    whileHover={{ y: -3 }}
+                    className="group flex flex-col items-start gap-3 p-5 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md hover:border-indigo-500/40 hover:bg-white/[0.06] transition-colors duration-300 text-left"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:bg-indigo-500/15 transition-colors">
+                      <Icon size={18} strokeWidth={2} />
+                    </div>
+                    <div className="text-sm font-semibold text-foreground">{feature.title}</div>
+                    <div className="text-muted-foreground text-xs leading-relaxed">{feature.description}</div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         </PulseBeams>
       </section>
 
-      {/* Cinematic footer */}
-      <CinematicFooter />
+      {/* Footer */}
+      <SiteFooter />
     </div>
   );
 }

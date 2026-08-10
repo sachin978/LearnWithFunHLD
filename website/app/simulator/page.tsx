@@ -1,7 +1,7 @@
 import SimulatorApp from "@/components/simulator/SimulatorApp";
 
 export const metadata = {
-  title: "SystemSim — Simulator",
+  title: "WireUp System — Simulator",
   description: "Interactive system design simulator",
 };
 

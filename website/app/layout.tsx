@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SystemSim — System Design Simulator",
+  title: "WireUp System — System Design Simulator",
   description:
     "Interactive system design interview simulator with real-time load testing and scoring. Practice 35 real interview problems.",
 };
@@ -30,6 +30,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
