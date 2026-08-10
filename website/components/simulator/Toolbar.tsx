@@ -6,15 +6,8 @@ import { Sun, Moon, Maximize2, Minimize2, Download, HelpCircle } from "lucide-re
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { scoreArchitecture } from "@/lib/simulator/scoring";
 import { generateDesignSummary, downloadTextFile } from "@/lib/simulator/exportSummary";
+import { INTERVIEW_PHASES as PHASES } from "@/lib/simulator/phases";
 
-const PHASES = [
-  "Requirements",
-  "Capacity Estimation",
-  "High-Level Design",
-  "Detailed Design",
-  "Trade-offs",
-  "Bottleneck & Scaling",
-];
 const PHASE_DURATION = 600; // 10 minutes each
 
 export default function Toolbar() {

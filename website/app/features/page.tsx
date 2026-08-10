@@ -3,82 +3,37 @@
 import Link from "next/link";
 import { motion, type Variants, type Easing } from "framer-motion";
 import { SiteFooter } from "@/components/ui/site-footer";
+import { COMPONENTS, CATEGORIES, type ComponentCategory } from "@/lib/simulator/components-data";
+import { PROBLEMS } from "@/lib/simulator/problems-data";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-const componentLibrary = [
-  {
-    category: "Networking",
-    color: "indigo",
-    icon: "🌐",
-    items: [
-      { name: "DNS", rps: "100k" },
-      { name: "CDN", rps: "500k" },
-      { name: "Load Balancer", rps: "1000k" },
-      { name: "API Gateway", rps: "50k" },
-      { name: "Rate Limiter", rps: "80k" },
-      { name: "Reverse Proxy", rps: "100k" },
-      { name: "Origin Shield", rps: "200k" },
-    ],
-  },
-  {
-    category: "Compute",
-    color: "violet",
-    icon: "⚙️",
-    items: [
-      { name: "App Server", rps: "5k" },
-      { name: "Auth Service", rps: "10k" },
-      { name: "WebSocket Server", rps: "50k" },
-      { name: "Task Scheduler", rps: "10k" },
-      { name: "Stream Processor", rps: "200k" },
-      { name: "Notification Service", rps: "50k" },
-      { name: "Custom Component", rps: "50k" },
-    ],
-  },
-  {
-    category: "Storage",
-    color: "emerald",
-    icon: "🗄️",
-    items: [
-      { name: "SQL Database", rps: "10k" },
-      { name: "NoSQL Database", rps: "50k" },
-      { name: "Cache / Redis", rps: "100k" },
-      { name: "Object Storage", rps: "25k" },
-      { name: "Search / ES", rps: "20k" },
-      { name: "Graph Database", rps: "8k" },
-      { name: "Time-Series DB", rps: "100k" },
-      { name: "Data Warehouse", rps: "1k" },
-      { name: "File Store", rps: "10k" },
-      { name: "Vector Database", rps: "10k" },
-      { name: "Geospatial Index", rps: "50k" },
-    ],
-  },
-  {
-    category: "Messaging",
-    color: "amber",
-    icon: "📨",
-    items: [
-      { name: "Message Queue", rps: "100k" },
-      { name: "Pub/Sub", rps: "200k" },
-    ],
-  },
-  {
-    category: "Infrastructure",
-    color: "cyan",
-    icon: "🏗️",
-    items: [
-      { name: "Service Mesh", rps: "80k" },
-      { name: "Monitoring", rps: "500k" },
-      { name: "Service Discovery", rps: "50k" },
-      { name: "Distributed Lock", rps: "10k" },
-      { name: "Circuit Breaker", rps: "100k" },
-      { name: "Coordination Service", rps: "20k" },
-      { name: "ID Generator", rps: "500k" },
-      { name: "Sharded Counter", rps: "500k" },
-      { name: "Config Service", rps: "50k" },
-    ],
-  },
-];
+// Category → swatch color + emoji for this page's showcase cards. Keep in
+// sync with lib/simulator/components-data.ts CATEGORY_COLORS whenever a
+// category is added there.
+const CATEGORY_META: Record<ComponentCategory, { color: string; icon: string }> = {
+  Client: { color: "sky", icon: "📱" },
+  Networking: { color: "indigo", icon: "🌐" },
+  Compute: { color: "violet", icon: "⚙️" },
+  Storage: { color: "emerald", icon: "🗄️" },
+  Messaging: { color: "amber", icon: "📨" },
+  Infrastructure: { color: "cyan", icon: "🏗️" },
+  Observability: { color: "rose", icon: "📈" },
+  Network: { color: "blue", icon: "🔀" },
+  "AI & Agents": { color: "fuchsia", icon: "🤖" },
+  External: { color: "orange", icon: "🔌" },
+};
+
+// Derived straight from the simulator's own component library, grouped by
+// category — this can't drift out of sync with the actual sidebar again.
+const componentLibrary = CATEGORIES.map((category) => ({
+  category,
+  ...CATEGORY_META[category],
+  items: COMPONENTS.filter((c) => c.category === category).map((c) => ({
+    name: c.name,
+    rps: `${c.rpsCapacity}k`,
+  })),
+}));
 
 const rightPanelTabs = [
   {
@@ -154,19 +109,29 @@ const fadeUp: Variants = {
 };
 
 const colorMap: Record<string, string> = {
+  sky: "border-sky-500/30 bg-sky-500/5 text-sky-400",
   indigo: "border-indigo-500/30 bg-indigo-500/5 text-indigo-400",
   violet: "border-violet-500/30 bg-violet-500/5 text-violet-400",
   emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-400",
   amber: "border-amber-500/30 bg-amber-500/5 text-amber-400",
   cyan: "border-cyan-500/30 bg-cyan-500/5 text-cyan-400",
+  rose: "border-rose-500/30 bg-rose-500/5 text-rose-400",
+  blue: "border-blue-500/30 bg-blue-500/5 text-blue-400",
+  fuchsia: "border-fuchsia-500/30 bg-fuchsia-500/5 text-fuchsia-400",
+  orange: "border-orange-500/30 bg-orange-500/5 text-orange-400",
 };
 
 const badgeMap: Record<string, string> = {
+  sky: "bg-sky-500/10 text-sky-400 border-sky-500/20",
   indigo: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
   violet: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  rose: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  fuchsia: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
+  orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
 };
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
@@ -256,8 +221,8 @@ export default function FeaturesPage() {
             </span>
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto mb-8">
-            An interactive system design interview simulator with 36 infrastructure components,
-            real-time load testing, AI scoring, and 35 real problems.
+            An interactive system design interview simulator with {COMPONENTS.length} infrastructure components,
+            real-time load testing, AI scoring, and {PROBLEMS.length} real problems.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <a
@@ -317,7 +282,7 @@ export default function FeaturesPage() {
       <Section
         id="components"
         label="Component Library"
-        title="36 infrastructure components across 5 categories"
+        title={`${COMPONENTS.length} infrastructure components across ${CATEGORIES.length} categories`}
         subtitle="Every component shows its default throughput capacity (RPS) — used in simulation calculations."
       >
         <div className="space-y-8">
@@ -538,7 +503,7 @@ export default function FeaturesPage() {
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
-            { icon: "📚", title: "35 Problems", desc: "URL Shortener, Twitter Feed, Netflix CDN, Uber Dispatch, WhatsApp, and 30 more real interview problems." },
+            { icon: "📚", title: `${PROBLEMS.length} Problems`, desc: `URL Shortener, Twitter Feed, Netflix CDN, Uber Dispatch, WhatsApp, and ${PROBLEMS.length - 5} more real interview problems.` },
             { icon: "🔍", title: "Side-by-Side Comparison", desc: "Load the reference solution and compare it directly against your own design on the same canvas." },
             { icon: "💡", title: "Progressive Hints", desc: "Collapsible hints in the Requirements panel — reveal them one by one to guide your thinking without spoilers." },
           ].map((item, i) => (
@@ -611,8 +576,8 @@ export default function FeaturesPage() {
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
-            { name: "Components", icon: "🧩", desc: "The default view. Left sidebar shows all 36 draggable component types organised by category." },
-            { name: "Problems", icon: "📋", desc: "Browse all 35 real interview problems. Click one to load its requirements into the inspector panel." },
+            { name: "Components", icon: "🧩", desc: `The default view. Left sidebar shows all ${COMPONENTS.length} draggable component types organised by category.` },
+            { name: "Problems", icon: "📋", desc: `Browse all ${PROBLEMS.length} real interview problems. Click one to load its requirements into the inspector panel.` },
             { name: "Learn", icon: "🎓", desc: "Educational content — concept explanations, architectural patterns, and interview tips for system design." },
           ].map((tab, i) => (
             <motion.div

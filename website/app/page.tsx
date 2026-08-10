@@ -7,6 +7,17 @@ import { HeroSection } from "@/components/ui/3d-hero-section";
 import { PulseBeams } from "@/components/ui/pulse-beams";
 import { MarqueeTicker } from "@/components/ui/marquee-ticker";
 import { SiteFooter } from "@/components/ui/site-footer";
+import { COMPONENTS } from "@/lib/simulator/components-data";
+import { PROBLEMS } from "@/lib/simulator/problems-data";
+import { INTERVIEW_PHASES } from "@/lib/simulator/phases";
+
+// Abbreviates a raw rpsCapacity number (e.g. 100000 -> "100k") the same way
+// the stats strip below has always displayed it.
+function abbreviateRps(n: number): string {
+  if (n >= 1_000_000) return `${Math.round(n / 1_000_000)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+  return `${n}`;
+}
 
 const navItems = [
   { name: "Home", url: "#", icon: Home },
@@ -164,10 +175,10 @@ export default function LandingPage() {
       <section className="relative z-10 bg-card border-y border-border py-12 px-4">
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: "36", label: "Component Types" },
-            { value: "35", label: "Interview Problems" },
-            { value: "6", label: "Interview Phases" },
-            { value: "100k", label: "Max RPS Simulated" },
+            { value: `${COMPONENTS.length}`, label: "Component Types" },
+            { value: `${PROBLEMS.length}`, label: "Interview Problems" },
+            { value: `${INTERVIEW_PHASES.length}`, label: "Interview Phases" },
+            { value: abbreviateRps(Math.max(...COMPONENTS.map((c) => c.rpsCapacity))), label: "Max RPS Simulated" },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
