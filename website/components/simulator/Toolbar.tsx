@@ -2,9 +2,10 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon, Maximize2, Minimize2 } from "lucide-react";
+import { Sun, Moon, Maximize2, Minimize2, Download } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { scoreArchitecture } from "@/lib/simulator/scoring";
+import { generateDesignSummary, downloadTextFile } from "@/lib/simulator/exportSummary";
 
 const PHASES = [
   "Requirements",
@@ -19,6 +20,7 @@ const PHASE_DURATION = 600; // 10 minutes each
 export default function Toolbar() {
   const {
     nodes, edges, activeProblem,
+    scoreResult, simulationResult, capacityInputs,
     clearCanvas, setScoreResult, setRightTab,
     interviewActive, interviewPhase, interviewTimeLeft,
     setInterviewActive, setInterviewPhase, setInterviewTimeLeft,
@@ -67,6 +69,19 @@ export default function Toolbar() {
   const scoreArchitectureAndShow = () => {
     setScoreResult(scoreArchitecture(nodes, edges));
     setRightTab("score");
+  };
+
+  const downloadSummary = () => {
+    const summary = generateDesignSummary({
+      problem: activeProblem,
+      nodes,
+      edges,
+      scoreResult,
+      simulationResult,
+      capacityInputs,
+    });
+    const slug = (activeProblem?.name ?? "design").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    downloadTextFile(`wireup-system-${slug}-summary.md`, summary);
   };
 
   const mins = String(Math.floor(interviewTimeLeft / 60)).padStart(2, "0");
@@ -151,6 +166,18 @@ export default function Toolbar() {
             </motion.button>
           );
         })}
+
+        <motion.button
+          onClick={downloadSummary}
+          whileHover={{ scale: 1.045 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.15 }}
+          title="Download a summary of your design, capacity estimate, simulation, score, and trade-offs"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-emerald-500/50 text-emerald-300 text-xs font-medium hover:bg-emerald-500/10 transition-colors"
+        >
+          <Download size={13} />
+          Download
+        </motion.button>
 
         <motion.button
           onClick={toggleFocusMode}

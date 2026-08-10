@@ -4,6 +4,7 @@ import type { Node, Edge } from "@xyflow/react";
 import type { Problem } from "./problems-data";
 import type { SimulationResult } from "./simulation";
 import type { ScoreResult } from "./scoring";
+import { DEFAULT_CAPACITY_INPUTS, type CapacityInputs } from "./capacity";
 
 export interface NodeData extends Record<string, unknown> {
   componentId: string;
@@ -41,6 +42,7 @@ interface SimulatorState {
   leftPanelCollapsed: boolean;
   rightPanelCollapsed: boolean;
   viewport: CanvasViewport | null;
+  capacityInputs: CapacityInputs;
 
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
   setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void;
@@ -60,6 +62,7 @@ interface SimulatorState {
   setLeftPanelCollapsed: (v: boolean) => void;
   setRightPanelCollapsed: (v: boolean) => void;
   setViewport: (v: CanvasViewport) => void;
+  setCapacityInputs: (patch: Partial<CapacityInputs>) => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>()(
@@ -68,7 +71,7 @@ export const useSimulatorStore = create<SimulatorState>()(
       nodes: [],
       edges: [],
       activeProblem: null,
-      leftTab: "components",
+      leftTab: "problems",
       rightTab: "props",
       selectedNodeId: null,
       simulationResult: null,
@@ -80,12 +83,13 @@ export const useSimulatorStore = create<SimulatorState>()(
       leftPanelCollapsed: false,
       rightPanelCollapsed: false,
       viewport: null,
+      capacityInputs: DEFAULT_CAPACITY_INPUTS,
 
       setNodes: (nodes) =>
         set((s) => ({ nodes: typeof nodes === "function" ? nodes(s.nodes) : nodes })),
       setEdges: (edges) =>
         set((s) => ({ edges: typeof edges === "function" ? edges(s.edges) : edges })),
-      setActiveProblem: (p) => set({ activeProblem: p, simulationResult: null, scoreResult: null }),
+      setActiveProblem: (p) => set({ activeProblem: p, simulationResult: null, scoreResult: null, leftTab: p ? "components" : "problems" }),
       setLeftTab: (t) => set({ leftTab: t }),
       setRightTab: (t) => set({ rightTab: t }),
       setSelectedNodeId: (id) => set({ selectedNodeId: id }),
@@ -112,7 +116,8 @@ export const useSimulatorStore = create<SimulatorState>()(
       setLeftPanelCollapsed: (v) => set({ leftPanelCollapsed: v }),
       setRightPanelCollapsed: (v) => set({ rightPanelCollapsed: v }),
       setViewport: (v) => set({ viewport: v }),
+      setCapacityInputs: (patch) => set((s) => ({ capacityInputs: { ...s.capacityInputs, ...patch } })),
     }),
-    { name: "wireup-system-canvas", partialize: (s) => ({ nodes: s.nodes, edges: s.edges, activeProblem: s.activeProblem, simTheme: s.simTheme, viewport: s.viewport }) },
+    { name: "wireup-system-canvas", partialize: (s) => ({ nodes: s.nodes, edges: s.edges, activeProblem: s.activeProblem, simTheme: s.simTheme, viewport: s.viewport, capacityInputs: s.capacityInputs, leftTab: s.leftTab }) },
   ),
 );

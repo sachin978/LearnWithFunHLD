@@ -1,36 +1,20 @@
 "use client";
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import type { NodeData } from "@/lib/simulator/store";
+import { computeCapacityEstimate, fmtQPS } from "@/lib/simulator/capacity";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 10 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.25, ease: "easeOut" as const } }),
 };
 
-function fmt(n: number, decimals = 1): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(decimals)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(decimals)}K`;
-  return n.toFixed(decimals);
-}
-
 export default function CapacityPanel() {
-  const { nodes, activeProblem } = useSimulatorStore();
-
-  const [dau,         setDau]         = useState(10_000_000); // 10M
-  const [reqPerUser,  setReqPerUser]  = useState(10);
-  const [writeRatio,  setWriteRatio]  = useState(10);          // %
-  const [dataSizeKB,  setDataSizeKB]  = useState(1);           // KB per write
+  const { nodes, activeProblem, capacityInputs, setCapacityInputs } = useSimulatorStore();
+  const { dau, reqPerUser, writeRatio, dataSizeKB } = capacityInputs;
 
   // ── Derived estimations ──────────────────────────────────────────────────
-  const totalQPS     = (dau * reqPerUser) / 86_400;
-  const peakQPS      = totalQPS * 3;
-  const writeQPS     = totalQPS * (writeRatio / 100);
-  const readQPS      = totalQPS - writeQPS;
-  const writesPerDay = writeQPS * 86_400;
-  const storageYear  = (writesPerDay * dataSizeKB * 365) / (1024 * 1024); // GB/year
-  const bandwidthMBs = (peakQPS * dataSizeKB) / 1024;                     // MB/s
+  const { totalQPS, peakQPS, writeQPS, readQPS, storageYear, bandwidthMBs } = computeCapacityEstimate(capacityInputs);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto p-4 space-y-4">
@@ -40,17 +24,17 @@ export default function CapacityPanel() {
       <div className="p-3 rounded-lg border border-zinc-700 bg-zinc-900 space-y-3">
         <div className="text-xs text-zinc-400 font-medium">Estimation Inputs</div>
         {[
-          { label: "DAU",           value: dau,        set: setDau,        min: 1_000,   max: 5_000_000_000, step: 1_000_000 },
-          { label: "Req / User",    value: reqPerUser,  set: setReqPerUser, min: 1,       max: 1000,          step: 1 },
-          { label: "Write ratio %", value: writeRatio,  set: setWriteRatio, min: 1,       max: 99,            step: 1 },
-          { label: "Data size KB",  value: dataSizeKB,  set: setDataSizeKB, min: 0.1,     max: 10_000,        step: 1 },
-        ].map(({ label, value, set, min, max, step }) => (
+          { key: "dau" as const,        label: "DAU",           value: dau,        min: 1_000,   max: 5_000_000_000, step: 1_000_000 },
+          { key: "reqPerUser" as const, label: "Req / User",    value: reqPerUser, min: 1,       max: 1000,          step: 1 },
+          { key: "writeRatio" as const, label: "Write ratio %", value: writeRatio, min: 1,       max: 99,            step: 1 },
+          { key: "dataSizeKB" as const, label: "Data size KB",  value: dataSizeKB, min: 0.1,     max: 10_000,        step: 1 },
+        ].map(({ key, label, value, min, max, step }) => (
           <div key={label} className="flex items-center gap-2">
             <span className="text-zinc-400 text-xs w-28 flex-shrink-0">{label}</span>
             <input
               type="number"
               value={value}
-              onChange={(e) => set(Number(e.target.value))}
+              onChange={(e) => setCapacityInputs({ [key]: Number(e.target.value) })}
               min={min} max={max} step={step}
               className="flex-1 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40"
             />
@@ -62,10 +46,10 @@ export default function CapacityPanel() {
       <div className="p-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5">
         <div className="text-indigo-400 text-xs font-semibold mb-2">Estimated Numbers</div>
         <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
-          <Row label="Avg QPS"        value={`${fmt(totalQPS)}/s`} />
-          <Row label="Peak QPS (3×)"  value={`${fmt(peakQPS)}/s`} highlight />
-          <Row label="Read QPS"       value={`${fmt(readQPS)}/s`} />
-          <Row label="Write QPS"      value={`${fmt(writeQPS)}/s`} />
+          <Row label="Avg QPS"        value={`${fmtQPS(totalQPS)}/s`} />
+          <Row label="Peak QPS (3×)"  value={`${fmtQPS(peakQPS)}/s`} highlight />
+          <Row label="Read QPS"       value={`${fmtQPS(readQPS)}/s`} />
+          <Row label="Write QPS"      value={`${fmtQPS(writeQPS)}/s`} />
           <Row label="Storage / year" value={`${storageYear.toFixed(1)} GB`} highlight />
           <Row label="Bandwidth peak" value={`${bandwidthMBs.toFixed(1)} MB/s`} />
         </div>

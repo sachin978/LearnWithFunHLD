@@ -141,9 +141,9 @@ export function SiteFooter() {
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       <footer className="site-footer-wrapper fixed bottom-0 left-0 z-50 w-full border-t border-border/50 bg-background/90 backdrop-blur-md text-foreground px-6 md:px-12 py-3">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-2 sm:order-1">
+          {/* <div className="text-muted-foreground text-[10px] md:text-xs font-semibold tracking-widest uppercase order-2 sm:order-1">
             © 2026 WireUp System. All rights reserved.
-          </div>
+          </div> */}
 
           <div className="footer-glass-pill px-5 py-2 rounded-full flex items-center gap-2 order-1 sm:order-2 cursor-default border-border/50">
             <span className="text-muted-foreground text-[10px] md:text-xs font-bold uppercase tracking-widest">Crafted with</span>

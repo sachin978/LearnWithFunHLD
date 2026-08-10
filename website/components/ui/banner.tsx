@@ -105,17 +105,6 @@ export function Banner({
             : `:root { --fd-banner-height: ${height}; }`}
         </style>
       ) : null}
-      {globalKey ? (
-        <style>{`.${globalKey} #${id} { display: none; }`}</style>
-      ) : null}
-      {globalKey ? (
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if (localStorage.getItem('${globalKey}') === 'true') document.documentElement.classList.add('${globalKey}');`,
-          }}
-        />
-      ) : null}
-
       {variant === "rainbow" ? flow({ colors: rainbowColors }) : null}
       {props.children}
       {id ? (

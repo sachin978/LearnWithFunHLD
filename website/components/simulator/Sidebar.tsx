@@ -75,9 +75,12 @@ export default function Sidebar() {
             transition={{ duration: 0.15, delay: 0.08 }}
             className="w-64 flex flex-col flex-1 overflow-hidden"
           >
-            {/* Tab switcher */}
+            {/* Tab switcher — Components only unlocks once a problem is picked,
+                so users aren't dropping components with no context. */}
             <div className="flex items-center border-b border-zinc-800">
-              {(["components", "problems"] as const).map((tab) => (
+              {(["problems", "components"] as const)
+                .filter((tab) => tab === "problems" || activeProblem)
+                .map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setLeftTab(tab)}
@@ -96,8 +99,8 @@ export default function Sidebar() {
               </button>
             </div>
 
-            {/* Components panel */}
-            {leftTab === "components" && (
+            {/* Components panel — only reachable once a problem is active */}
+            {leftTab === "components" && activeProblem && (
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="p-2">
                   <input
@@ -151,8 +154,9 @@ export default function Sidebar() {
               </div>
             )}
 
-            {/* Problems panel */}
-            {leftTab === "problems" && (
+            {/* Problems panel — also the fallback if "components" was somehow
+                left active with no problem selected */}
+            {(leftTab === "problems" || !activeProblem) && (
               <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5">
                 {PROBLEMS.map((p) => (
                   <button

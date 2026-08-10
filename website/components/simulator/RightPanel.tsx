@@ -1,4 +1,5 @@
 "use client";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, SlidersHorizontal, Zap, Target, Gauge, Scale } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
@@ -8,6 +9,10 @@ import SimulatePanel from "./panels/SimulatePanel";
 import ScorePanel from "./panels/ScorePanel";
 import CapacityPanel from "./panels/CapacityPanel";
 import TradeoffsPanel from "./panels/TradeoffsPanel";
+
+const MIN_WIDTH = 240;
+const MAX_WIDTH = 480;
+const DEFAULT_WIDTH = 288;
 
 const TABS: { id: RightTab; label: string; icon: typeof SlidersHorizontal }[] = [
   { id: "props",      label: "Props",      icon: SlidersHorizontal },
@@ -29,12 +34,49 @@ export default function RightPanel() {
   const { rightTab, setRightTab, rightPanelCollapsed, setRightPanelCollapsed } = useSimulatorStore();
   const ActivePanel = PANELS[rightTab];
 
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
+  const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const handleResizeStart = (e: React.PointerEvent) => {
+    e.preventDefault();
+    dragState.current = { startX: e.clientX, startWidth: width };
+    setIsResizing(true);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (!dragState.current) return;
+      // Panel is on the right edge, so dragging left (negative delta) grows it.
+      const delta = dragState.current.startX - moveEvent.clientX;
+      const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragState.current.startWidth + delta));
+      setWidth(next);
+    };
+    const handlePointerUp = () => {
+      dragState.current = null;
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
+
   return (
     <motion.div
-      animate={{ width: rightPanelCollapsed ? 28 : 288 }}
-      transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-      className="flex-shrink-0 flex flex-col border-l border-zinc-800 bg-zinc-950 overflow-hidden"
+      animate={{ width: rightPanelCollapsed ? 28 : width }}
+      transition={{ duration: isResizing ? 0 : 0.25, ease: [0.4, 0, 0.2, 1] }}
+      className="relative flex-shrink-0 flex flex-col border-l border-zinc-800 bg-zinc-950 overflow-hidden"
     >
+      {!rightPanelCollapsed && (
+        <div
+          onPointerDown={handleResizeStart}
+          title="Drag to resize"
+          className={`absolute left-0 top-0 bottom-0 w-1.5 z-20 cursor-col-resize transition-colors ${isResizing ? "bg-indigo-500/60" : "hover:bg-indigo-500/40"}`}
+        />
+      )}
       <AnimatePresence mode="wait" initial={false}>
         {rightPanelCollapsed ? (
           <motion.div
@@ -60,7 +102,7 @@ export default function RightPanel() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15, delay: 0.08 }}
-            className="w-72 flex flex-col flex-1 overflow-hidden"
+            className="w-full flex flex-col flex-1 overflow-hidden"
           >
             {/* Tab bar */}
             <div className="flex items-center border-b border-zinc-800">
