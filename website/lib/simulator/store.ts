@@ -33,6 +33,7 @@ interface SimulatorState {
   leftTab: LeftTab;
   rightTab: RightTab;
   selectedNodeId: string | null;
+  selectedEdgeId: string | null;
   simulationResult: SimulationResult | null;
   scoreResult: ScoreResult | null;
   interviewActive: boolean;
@@ -51,6 +52,8 @@ interface SimulatorState {
   setLeftTab: (t: LeftTab) => void;
   setRightTab: (t: RightTab) => void;
   setSelectedNodeId: (id: string | null) => void;
+  setSelectedEdgeId: (id: string | null) => void;
+  deleteEdge: (id: string) => void;
   setSimulationResult: (r: SimulationResult | null) => void;
   setScoreResult: (r: ScoreResult | null) => void;
   updateNodeData: (id: string, patch: Partial<NodeData>) => void;
@@ -76,6 +79,7 @@ export const useSimulatorStore = create<SimulatorState>()(
       leftTab: "problems",
       rightTab: "props",
       selectedNodeId: null,
+      selectedEdgeId: null,
       simulationResult: null,
       scoreResult: null,
       interviewActive: false,
@@ -96,6 +100,12 @@ export const useSimulatorStore = create<SimulatorState>()(
       setLeftTab: (t) => set({ leftTab: t }),
       setRightTab: (t) => set({ rightTab: t }),
       setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+      setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
+      deleteEdge: (id) =>
+        set((s) => ({
+          edges: s.edges.filter((e) => e.id !== id),
+          selectedEdgeId: s.selectedEdgeId === id ? null : s.selectedEdgeId,
+        })),
       setSimulationResult: (r) => set({ simulationResult: r }),
       setScoreResult: (r) => set({ scoreResult: r }),
       updateNodeData: (id, patch) =>

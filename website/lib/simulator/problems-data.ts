@@ -24,6 +24,9 @@ export interface Problem {
   scoringCriteria: ScoringCriteria[];
 }
 
+const DIFFICULTY_ORDER: Record<Problem["difficulty"], number> = { Easy: 0, Medium: 1, Hard: 2 };
+
+/** Problems in authoring order — kept as-is so the source stays easy to scan/edit. */
 export const PROBLEMS: Problem[] = [
   {
     id: "url-shortener",
@@ -825,3 +828,8 @@ export const PROBLEMS: Problem[] = [
     ],
   },
 ];
+
+/** PROBLEMS sorted Easy → Medium → Hard (stable — ties keep their PROBLEMS order). */
+export const PROBLEMS_BY_DIFFICULTY: Problem[] = [...PROBLEMS].sort(
+  (a, b) => DIFFICULTY_ORDER[a.difficulty] - DIFFICULTY_ORDER[b.difficulty],
+);

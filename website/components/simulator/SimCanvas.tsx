@@ -5,27 +5,37 @@ import {
   ReactFlow,
   Background,
   Controls,
+  Panel,
   addEdge,
   useReactFlow,
   type Connection,
   type NodeTypes,
+  type EdgeTypes,
   type OnMoveEnd,
   BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import ComponentNode from "./NodeComponent";
+import FlowEdge from "./FlowEdge";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { COMPONENTS } from "@/lib/simulator/components-data";
+import { UTILIZATION_LEGEND } from "@/lib/simulator/traffic";
 import type { NodeData } from "@/lib/simulator/store";
 
 const nodeTypes: NodeTypes = { componentNode: ComponentNode };
+const edgeTypes: EdgeTypes = { flowEdge: FlowEdge };
 
 let nodeIdCounter = Date.now();
 const newId = () => `node_${++nodeIdCounter}`;
 
 export default function SimCanvas() {
-  const { nodes, edges, setNodes, setEdges, setSelectedNodeId, setRightTab, deleteNode, simTheme, viewport, setViewport } =
+  const { nodes, edges, setNodes, setEdges, setSelectedNodeId, setRightTab, deleteNode, simTheme, viewport, setViewport, simulationResult, selectedEdgeId, setSelectedEdgeId, deleteEdge } =
     useSimulatorStore();
+
+  // Reflect the selected edge as ReactFlow's own `selected` flag (purely for
+  // rendering — the underlying stored edges are untouched) so the selected
+  // connection highlights and Delete/Backspace has something to remove.
+  const displayEdges = edges.map((e) => (e.selected !== (e.id === selectedEdgeId) ? { ...e, selected: e.id === selectedEdgeId } : e));
 
   const isLight = simTheme === "light";
   const { screenToFlowPosition } = useReactFlow();
@@ -40,7 +50,7 @@ export default function SimCanvas() {
   );
 
   const onConnect = useCallback(
-    (conn: Connection) => setEdges((eds) => addEdge({ ...conn, animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } }, eds)),
+    (conn: Connection) => setEdges((eds) => addEdge({ ...conn, type: "flowEdge", style: { stroke: "#6366f1", strokeWidth: 2 } }, eds)),
     [setEdges],
   );
 
@@ -75,29 +85,47 @@ export default function SimCanvas() {
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: { id: string }) => {
       setSelectedNodeId(node.id);
+      setSelectedEdgeId(null);
       setRightTab("props");
     },
-    [setSelectedNodeId, setRightTab],
+    [setSelectedNodeId, setSelectedEdgeId, setRightTab],
   );
 
-  const onPaneClick = useCallback(() => setSelectedNodeId(null), [setSelectedNodeId]);
+  const onEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: { id: string }) => {
+      setSelectedEdgeId(edge.id);
+      setSelectedNodeId(null);
+    },
+    [setSelectedEdgeId, setSelectedNodeId],
+  );
+
+  const onPaneClick = useCallback(() => {
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+  }, [setSelectedNodeId, setSelectedEdgeId]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Delete" || e.key === "Backspace") {
-        const { selectedNodeId } = useSimulatorStore.getState();
-        if (selectedNodeId) deleteNode(selectedNodeId);
+        const { selectedNodeId, selectedEdgeId } = useSimulatorStore.getState();
+        // A connection is a smaller, more "am I sure" target than a whole
+        // node — if one's selected, delete it first rather than falling
+        // through to whatever node happens to also be selected.
+        if (selectedEdgeId) deleteEdge(selectedEdgeId);
+        else if (selectedNodeId) deleteNode(selectedNodeId);
       }
     },
-    [deleteNode],
+    [deleteNode, deleteEdge],
   );
 
   return (
     <div ref={canvasRef} className="flex-1 h-full outline-none" onKeyDown={onKeyDown} tabIndex={0}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={displayEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        defaultEdgeOptions={{ type: "flowEdge", style: { stroke: "#6366f1", strokeWidth: 2 } }}
         onNodesChange={(changes) => {
           setNodes((nds) => {
             let updated = [...nds];
@@ -125,6 +153,7 @@ export default function SimCanvas() {
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
         onMoveEnd={onMoveEnd}
         {...(hadSavedViewport.current
@@ -139,6 +168,23 @@ export default function SimCanvas() {
           ? "!bg-white !border-zinc-200 [&_button]:!bg-zinc-50 [&_button]:!border-zinc-200 [&_button]:!text-zinc-700"
           : "!bg-zinc-900 !border-zinc-700 [&_button]:!bg-zinc-800 [&_button]:!border-zinc-700 [&_button]:!text-white"
         } />
+
+        {/* Traffic color legend — only meaningful once there's simulation data to color nodes/edges by */}
+        {simulationResult && (
+          <Panel position="bottom-right">
+            <div className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-[10px] ${
+              isLight ? "bg-white/90 border-zinc-200 text-zinc-600" : "bg-zinc-900/90 border-zinc-700 text-zinc-400"
+            }`}>
+              <span className="font-semibold uppercase tracking-wide">Load</span>
+              {UTILIZATION_LEGEND.map((entry) => (
+                <span key={entry.range} className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.hex }} />
+                  {entry.range}
+                </span>
+              ))}
+            </div>
+          </Panel>
+        )}
 
         {/* Empty state */}
         {nodes.length === 0 && (

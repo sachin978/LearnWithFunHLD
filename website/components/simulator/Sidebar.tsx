@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { COMPONENTS, CATEGORIES, CATEGORY_COLORS } from "@/lib/simulator/components-data";
 import { ComponentIcon } from "@/lib/simulator/icon-registry";
-import { PROBLEMS } from "@/lib/simulator/problems-data";
+import { PROBLEMS_BY_DIFFICULTY } from "@/lib/simulator/problems-data";
 import type { ComponentCategory } from "@/lib/simulator/components-data";
 
 function DraggableComponent({ id, name, icon, category, rpsCapacity }: { id: string; name: string; icon: string; category: ComponentCategory; rpsCapacity: number }) {
@@ -159,7 +159,7 @@ export default function Sidebar() {
                 left active with no problem selected */}
             {(leftTab === "problems" || !activeProblem) && (
               <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1.5">
-                {PROBLEMS.map((p) => (
+                {PROBLEMS_BY_DIFFICULTY.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setActiveProblem(p)}
