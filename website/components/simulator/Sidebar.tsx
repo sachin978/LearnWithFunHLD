@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { COMPONENTS, CATEGORIES, CATEGORY_COLORS } from "@/lib/simulator/components-data";
+import { ComponentIcon } from "@/lib/simulator/icon-registry";
 import { PROBLEMS } from "@/lib/simulator/problems-data";
 import type { ComponentCategory } from "@/lib/simulator/components-data";
 
@@ -18,7 +19,7 @@ function DraggableComponent({ id, name, icon, category, rpsCapacity }: { id: str
       }}
       className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${c.border} ${c.bg} cursor-grab active:cursor-grabbing hover:brightness-125 hover:-translate-y-0.5 active:scale-[0.98] transition-[filter,transform] duration-150 select-none`}
     >
-      <span className="text-base">{icon}</span>
+      <ComponentIcon iconKey={icon} size={16} className={c.text} />
       <div className="flex-1 min-w-0">
         <div className="text-white text-xs font-medium truncate">{name}</div>
         <div className="text-zinc-500 text-[10px]">{rpsCapacity}k RPS</div>

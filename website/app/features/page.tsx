@@ -64,7 +64,7 @@ const componentLibrary = [
   },
   {
     category: "Infrastructure",
-    color: "rose",
+    color: "cyan",
     icon: "🏗️",
     items: [
       { name: "Service Mesh", rps: "80k" },
@@ -158,7 +158,7 @@ const colorMap: Record<string, string> = {
   violet: "border-violet-500/30 bg-violet-500/5 text-violet-400",
   emerald: "border-emerald-500/30 bg-emerald-500/5 text-emerald-400",
   amber: "border-amber-500/30 bg-amber-500/5 text-amber-400",
-  rose: "border-rose-500/30 bg-rose-500/5 text-rose-400",
+  cyan: "border-cyan-500/30 bg-cyan-500/5 text-cyan-400",
 };
 
 const badgeMap: Record<string, string> = {
@@ -166,7 +166,7 @@ const badgeMap: Record<string, string> = {
   violet: "bg-violet-500/10 text-violet-400 border-violet-500/20",
   emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  rose: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
 };
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────

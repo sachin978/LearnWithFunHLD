@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon, Maximize2, Minimize2, Download } from "lucide-react";
+import { Sun, Moon, Maximize2, Minimize2, Download, HelpCircle } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { scoreArchitecture } from "@/lib/simulator/scoring";
 import { generateDesignSummary, downloadTextFile } from "@/lib/simulator/exportSummary";
@@ -24,7 +24,7 @@ export default function Toolbar() {
     clearCanvas, setScoreResult, setRightTab,
     interviewActive, interviewPhase, interviewTimeLeft,
     setInterviewActive, setInterviewPhase, setInterviewTimeLeft,
-    simTheme, setSimTheme,
+    simTheme, setSimTheme, setTourOpen,
     leftPanelCollapsed, rightPanelCollapsed, setLeftPanelCollapsed, setRightPanelCollapsed,
   } = useSimulatorStore();
 
@@ -98,11 +98,11 @@ export default function Toolbar() {
         position: { x: 200 + Math.random() * 200, y: 200 + Math.random() * 200 },
         data: {
           componentId: "custom",
-          label: "📝 Note",
+          label: "Note",
           rpsCapacity: 0,
           instances: 1,
           category: "Compute",
-          icon: "📝",
+          icon: "sticky-note",
           color: "violet",
           notes: noteText,
         },
@@ -177,6 +177,17 @@ export default function Toolbar() {
         >
           <Download size={13} />
           Download
+        </motion.button>
+
+        <motion.button
+          onClick={() => setTourOpen(true)}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
+          transition={{ duration: 0.15 }}
+          title="Replay the guided tour"
+          className="p-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white transition-colors"
+        >
+          <HelpCircle size={14} />
         </motion.button>
 
         <motion.button

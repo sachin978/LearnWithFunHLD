@@ -43,6 +43,7 @@ interface SimulatorState {
   rightPanelCollapsed: boolean;
   viewport: CanvasViewport | null;
   capacityInputs: CapacityInputs;
+  tourOpen: boolean;
 
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
   setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void;
@@ -63,6 +64,7 @@ interface SimulatorState {
   setRightPanelCollapsed: (v: boolean) => void;
   setViewport: (v: CanvasViewport) => void;
   setCapacityInputs: (patch: Partial<CapacityInputs>) => void;
+  setTourOpen: (v: boolean) => void;
 }
 
 export const useSimulatorStore = create<SimulatorState>()(
@@ -84,6 +86,7 @@ export const useSimulatorStore = create<SimulatorState>()(
       rightPanelCollapsed: false,
       viewport: null,
       capacityInputs: DEFAULT_CAPACITY_INPUTS,
+      tourOpen: false,
 
       setNodes: (nodes) =>
         set((s) => ({ nodes: typeof nodes === "function" ? nodes(s.nodes) : nodes })),
@@ -117,6 +120,7 @@ export const useSimulatorStore = create<SimulatorState>()(
       setRightPanelCollapsed: (v) => set({ rightPanelCollapsed: v }),
       setViewport: (v) => set({ viewport: v }),
       setCapacityInputs: (patch) => set((s) => ({ capacityInputs: { ...s.capacityInputs, ...patch } })),
+      setTourOpen: (v) => set({ tourOpen: v }),
     }),
     { name: "wireup-system-canvas", partialize: (s) => ({ nodes: s.nodes, edges: s.edges, activeProblem: s.activeProblem, simTheme: s.simTheme, viewport: s.viewport, capacityInputs: s.capacityInputs, leftTab: s.leftTab }) },
   ),

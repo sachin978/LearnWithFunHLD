@@ -2,6 +2,7 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { CATEGORY_COLORS } from "@/lib/simulator/components-data";
+import { ComponentIcon } from "@/lib/simulator/icon-registry";
 import type { NodeData } from "@/lib/simulator/store";
 import type { ComponentCategory } from "@/lib/simulator/components-data";
 
@@ -22,7 +23,7 @@ function ComponentNode({ data, selected }: NodeProps) {
 
       <div className="px-3 py-2.5">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-lg leading-none">{d.icon}</span>
+          <ComponentIcon iconKey={d.icon} size={16} className={c.text} />
           <span className="text-white text-xs font-semibold truncate max-w-[90px]">{d.label}</span>
         </div>
         <div className="flex items-center justify-between gap-1">

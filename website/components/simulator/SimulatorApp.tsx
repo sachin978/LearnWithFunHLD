@@ -4,6 +4,7 @@ import Toolbar from "./Toolbar";
 import Sidebar from "./Sidebar";
 import SimCanvas from "./SimCanvas";
 import RightPanel from "./RightPanel";
+import ProductTour from "./ProductTour";
 import { useSimulatorStore } from "@/lib/simulator/store";
 
 export default function SimulatorApp() {
@@ -19,6 +20,7 @@ export default function SimulatorApp() {
           <RightPanel />
         </div>
       </div>
+      <ProductTour />
     </ReactFlowProvider>
   );
 }
