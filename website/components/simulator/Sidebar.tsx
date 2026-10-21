@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
@@ -7,25 +7,61 @@ import { COMPONENTS, CATEGORIES, CATEGORY_COLORS } from "@/lib/simulator/compone
 import { ComponentIcon } from "@/lib/simulator/icon-registry";
 import { PROBLEMS_BY_DIFFICULTY } from "@/lib/simulator/problems-data";
 import type { ComponentCategory, ComponentDef } from "@/lib/simulator/components-data";
+import { addComponentAtCenter, cancelDrag, endDrag, moveDrag } from "@/lib/simulator/dnd";
+
+/** Pixels the pointer must travel before a press becomes a drag (below that it's a click). */
+const DRAG_THRESHOLD = 5;
 
 function DraggableComponent({ id, name, icon, category, rpsCapacity, isCustom }: { id: string; name: string; icon: string; category: ComponentCategory; rpsCapacity: number; isCustom?: boolean }) {
   const c = CATEGORY_COLORS[category];
+  const press = useRef<{ x: number; y: number; dragging: boolean } | null>(null);
+
+  // Pointer-event drag (see lib/simulator/dnd.ts for why not HTML5 drag-and-drop).
+  const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    press.current = { x: e.clientX, y: e.clientY, dragging: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const p = press.current;
+    if (!p) return;
+    if (!p.dragging && Math.hypot(e.clientX - p.x, e.clientY - p.y) < DRAG_THRESHOLD) return;
+    p.dragging = true;
+    moveDrag(id, name, e.clientX, e.clientY);
+  };
+  const onPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const p = press.current;
+    press.current = null;
+    if (!p) return;
+    if (p.dragging) endDrag(e.clientX, e.clientY);
+    else addComponentAtCenter(id); // a plain click adds it to the middle of the canvas
+  };
+  const onPointerCancel = () => {
+    press.current = null;
+    cancelDrag();
+  };
+
   return (
-    <div
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData("application/wireup-system", id);
-        e.dataTransfer.effectAllowed = "move";
+    <button
+      type="button"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      // Pointer presses are handled above; this only fires for keyboard (Enter/Space).
+      onClick={(e) => {
+        if (e.detail === 0) addComponentAtCenter(id);
       }}
-      title={isCustom ? `${name} (custom component)` : undefined}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isCustom ? "border-dashed" : ""} ${c.border} ${c.bg} cursor-grab active:cursor-grabbing hover:brightness-125 hover:-translate-y-0.5 active:scale-[0.98] transition-[filter,transform] duration-150 select-none`}
+      onDragStart={(e) => e.preventDefault()}
+      title={`${name}${isCustom ? " (custom component)" : ""} — drag onto the canvas, or click to add`}
+      className={`w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg border ${isCustom ? "border-dashed" : ""} ${c.border} ${c.bg} cursor-grab active:cursor-grabbing hover:brightness-125 hover:-translate-y-0.5 active:scale-[0.98] transition-[filter,transform] duration-150 select-none touch-pan-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
     >
       <ComponentIcon iconKey={icon} size={16} className={c.text} />
       <div className="flex-1 min-w-0">
         <div className="text-white text-xs font-medium truncate">{name}</div>
         <div className="text-zinc-500 text-[10px]">{rpsCapacity}k RPS</div>
       </div>
-    </div>
+    </button>
   );
 }
 

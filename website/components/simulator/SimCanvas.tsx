@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   ReactFlow,
@@ -7,6 +7,7 @@ import {
   Controls,
   Panel,
   addEdge,
+  applyNodeChanges,
   useReactFlow,
   type Connection,
   type NodeTypes,
@@ -21,6 +22,7 @@ import { useSimulatorStore } from "@/lib/simulator/store";
 import { COMPONENTS } from "@/lib/simulator/components-data";
 import { UTILIZATION_LEGEND } from "@/lib/simulator/traffic";
 import type { NodeData } from "@/lib/simulator/store";
+import { registerDropTarget } from "@/lib/simulator/dnd";
 
 const nodeTypes: NodeTypes = { componentNode: ComponentNode };
 const edgeTypes: EdgeTypes = { flowEdge: FlowEdge };
@@ -37,7 +39,14 @@ export default function SimCanvas() {
   // selection highlighting, Delete/Backspace, and the node's "+" button
   // (which only shows once selected) all have something real to read.
   const displayEdges = edges.map((e) => (e.selected !== (e.id === selectedEdgeId) ? { ...e, selected: e.id === selectedEdgeId } : e));
-  const displayNodes = nodes.map((n) => (n.selected !== (n.id === selectedNodeId) ? { ...n, selected: n.id === selectedNodeId } : n));
+  // Only re-wrap a node when its selection really differs (`undefined` counts
+  // as unselected) and memoize the result: React Flow resets a node's measured
+  // size whenever it receives a new object for it, so needless re-wrapping on
+  // every render would keep freshly dropped nodes hidden.
+  const displayNodes = useMemo(
+    () => nodes.map((n) => (Boolean(n.selected) !== (n.id === selectedNodeId) ? { ...n, selected: n.id === selectedNodeId } : n)),
+    [nodes, selectedNodeId],
+  );
 
   const isLight = simTheme === "light";
   const { screenToFlowPosition } = useReactFlow();
@@ -56,19 +65,11 @@ export default function SimCanvas() {
     [setEdges],
   );
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const componentId = e.dataTransfer.getData("application/wireup-system");
-      if (!componentId) return;
+  // Adds a component node at a screen position (used by drag-drop and click-to-add).
+  const addComponentAt = useCallback(
+    (componentId: string, screen: { x: number; y: number }) => {
       const def = [...COMPONENTS, ...customComponents].find((c) => c.id === componentId);
       if (!def) return;
-      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const data: NodeData = {
         componentId: def.id,
         label: def.name,
@@ -79,10 +80,30 @@ export default function SimCanvas() {
         color: def.color,
         notes: "",
       };
+      const position = screenToFlowPosition(screen);
       setNodes((nds) => [...nds, { id: newId(), type: "componentNode", position, data }]);
     },
     [screenToFlowPosition, setNodes, customComponents],
   );
+
+  // Register this canvas as the sidebar's drop target (pointer-event drag — see lib/simulator/dnd.ts).
+  useEffect(() => {
+    const rect = () => canvasRef.current?.getBoundingClientRect();
+    return registerDropTarget({
+      contains: (x, y) => {
+        const r = rect();
+        return Boolean(r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
+      },
+      drop: (componentId, x, y) => addComponentAt(componentId, { x, y }),
+      addAtCenter: (componentId) => {
+        const r = rect();
+        if (!r) return;
+        // Small random jitter so repeated clicks don't stack nodes exactly on top of each other.
+        const jitter = () => (Math.random() - 0.5) * 80;
+        addComponentAt(componentId, { x: r.left + r.width / 2 + jitter(), y: r.top + r.height / 2 + jitter() });
+      },
+    });
+  }, [addComponentAt]);
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: { id: string }) => {
@@ -132,18 +153,15 @@ export default function SimCanvas() {
         edgeTypes={edgeTypes}
         defaultEdgeOptions={{ type: "flowEdge", style: { stroke: "#6366f1", strokeWidth: 2 } }}
         onNodesChange={(changes) => {
-          setNodes((nds) => {
-            let updated = [...nds];
-            changes.forEach((change) => {
-              if (change.type === "position" && change.position) {
-                updated = updated.map((n) => n.id === change.id ? { ...n, position: change.position! } : n);
-              }
-              if (change.type === "remove") {
-                updated = updated.filter((n) => n.id !== change.id);
-              }
-            });
-            return updated;
-          });
+          // Selection lives in the store (selectedNodeId), so skip React Flow's
+          // own select changes. Everything else must be applied — including
+          // "dimensions": React Flow keeps a node hidden until its measured
+          // size is in the node data. Measurements aren't user edits, so they
+          // don't create undo checkpoints.
+          const relevant = changes.filter((c) => c.type !== "select");
+          if (relevant.length === 0) return;
+          const measurementOnly = relevant.every((c) => c.type === "dimensions");
+          setNodes((nds) => applyNodeChanges(relevant, nds), { history: !measurementOnly });
         }}
         onEdgesChange={(changes) => {
           setEdges((eds) => {
@@ -155,8 +173,6 @@ export default function SimCanvas() {
           });
         }}
         onConnect={onConnect}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}

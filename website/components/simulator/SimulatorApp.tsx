@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import SimCanvas from "./SimCanvas";
 import RightPanel from "./RightPanel";
 import ProductTour from "./ProductTour";
+import DragGhost from "./DragGhost";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { runSimulation } from "@/lib/simulator/simulation";
 
@@ -71,6 +72,7 @@ export default function SimulatorApp() {
         </div>
       </div>
       <ProductTour />
+      <DragGhost />
     </ReactFlowProvider>
   );
 }

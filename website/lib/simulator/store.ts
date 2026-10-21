@@ -56,7 +56,8 @@ interface SimulatorState {
   capacityInputs: CapacityInputs;
   tourOpen: boolean;
 
-  setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
+  /** `history: false` applies the update without an undo checkpoint (e.g. React Flow measuring a node). */
+  setNodes: (nodes: Node[] | ((prev: Node[]) => Node[]), opts?: { history?: boolean }) => void;
   setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void;
   undo: () => void;
   redo: () => void;
@@ -145,10 +146,10 @@ export const useSimulatorStore = create<SimulatorState>()(
       capacityInputs: DEFAULT_CAPACITY_INPUTS,
       tourOpen: false,
 
-      setNodes: (nodes) =>
+      setNodes: (nodes, opts) =>
         set((s) => {
           const next = typeof nodes === "function" ? nodes(s.nodes) : nodes;
-          if (sameItems(next, s.nodes)) return { nodes: next };
+          if (sameItems(next, s.nodes) || opts?.history === false) return { nodes: next };
           return { nodes: next, ...historyPatch(s) };
         }),
       setEdges: (edges) =>
