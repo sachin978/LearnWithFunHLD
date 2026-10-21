@@ -37,6 +37,29 @@ export default function SimulatorApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, activeProblem]);
 
+  // Global undo/redo shortcuts — window-level (not scoped to the canvas div)
+  // so they work no matter what on the page has focus, EXCEPT while the
+  // user is actually typing in a field, where Ctrl+Z should do the normal
+  // browser text-undo instead of touching the canvas.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isUndoRedo = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z";
+      if (!isUndoRedo) return;
+
+      const target = e.target as HTMLElement | null;
+      const isTextInput =
+        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+      if (isTextInput) return;
+
+      e.preventDefault();
+      const { undo, redo } = useSimulatorStore.getState();
+      if (e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <ReactFlowProvider>
       <div className={`flex flex-col h-screen w-screen overflow-hidden ${simTheme === "dark" ? "bg-zinc-950" : "bg-white sim-light"}`}>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { gsap } from "gsap";
 import { cn } from "@/lib/utils";
 
@@ -152,15 +153,24 @@ export function SiteFooter() {
             <span className="text-foreground font-black text-xs md:text-sm tracking-normal ml-1">Engineers</span>
           </div>
 
-          <MagneticButton
-            as="button"
-            onClick={scrollToTop}
-            className="w-10 h-10 rounded-full footer-glass-pill flex items-center justify-center text-muted-foreground hover:text-foreground group order-3"
-          >
-            <svg className="w-5 h-5 transform group-hover:-translate-y-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-          </MagneticButton>
+          <div className="flex items-center gap-3 order-3">
+            <Link
+              href="/learn"
+              className="footer-glass-pill px-4 py-2 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+            >
+              Learn
+            </Link>
+
+            <MagneticButton
+              as="button"
+              onClick={scrollToTop}
+              className="w-10 h-10 rounded-full footer-glass-pill flex items-center justify-center text-muted-foreground hover:text-foreground group"
+            >
+              <svg className="w-5 h-5 transform group-hover:-translate-y-1.5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </MagneticButton>
+          </div>
         </div>
       </footer>
     </>

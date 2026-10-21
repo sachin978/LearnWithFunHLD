@@ -29,13 +29,15 @@ let nodeIdCounter = Date.now();
 const newId = () => `node_${++nodeIdCounter}`;
 
 export default function SimCanvas() {
-  const { nodes, edges, setNodes, setEdges, setSelectedNodeId, setRightTab, deleteNode, simTheme, viewport, setViewport, simulationResult, selectedEdgeId, setSelectedEdgeId, deleteEdge } =
+  const { nodes, edges, setNodes, setEdges, selectedNodeId, setSelectedNodeId, setRightTab, deleteNode, simTheme, viewport, setViewport, simulationResult, selectedEdgeId, setSelectedEdgeId, deleteEdge, customComponents, setRightPanelCollapsed } =
     useSimulatorStore();
 
-  // Reflect the selected edge as ReactFlow's own `selected` flag (purely for
-  // rendering — the underlying stored edges are untouched) so the selected
-  // connection highlights and Delete/Backspace has something to remove.
+  // Reflect the selected edge/node as ReactFlow's own `selected` flag
+  // (purely for rendering — the underlying stored arrays are untouched) so
+  // selection highlighting, Delete/Backspace, and the node's "+" button
+  // (which only shows once selected) all have something real to read.
   const displayEdges = edges.map((e) => (e.selected !== (e.id === selectedEdgeId) ? { ...e, selected: e.id === selectedEdgeId } : e));
+  const displayNodes = nodes.map((n) => (n.selected !== (n.id === selectedNodeId) ? { ...n, selected: n.id === selectedNodeId } : n));
 
   const isLight = simTheme === "light";
   const { screenToFlowPosition } = useReactFlow();
@@ -64,7 +66,7 @@ export default function SimCanvas() {
       e.preventDefault();
       const componentId = e.dataTransfer.getData("application/wireup-system");
       if (!componentId) return;
-      const def = COMPONENTS.find((c) => c.id === componentId);
+      const def = [...COMPONENTS, ...customComponents].find((c) => c.id === componentId);
       if (!def) return;
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const data: NodeData = {
@@ -79,7 +81,7 @@ export default function SimCanvas() {
       };
       setNodes((nds) => [...nds, { id: newId(), type: "componentNode", position, data }]);
     },
-    [screenToFlowPosition, setNodes],
+    [screenToFlowPosition, setNodes, customComponents],
   );
 
   const onNodeClick = useCallback(
@@ -87,8 +89,11 @@ export default function SimCanvas() {
       setSelectedNodeId(node.id);
       setSelectedEdgeId(null);
       setRightTab("props");
+      // Selecting a component should surface its settings even if the panel
+      // was minimized — no reason to make the user go find it themselves.
+      setRightPanelCollapsed(false);
     },
-    [setSelectedNodeId, setSelectedEdgeId, setRightTab],
+    [setSelectedNodeId, setSelectedEdgeId, setRightTab, setRightPanelCollapsed],
   );
 
   const onEdgeClick = useCallback(
@@ -121,7 +126,7 @@ export default function SimCanvas() {
   return (
     <div ref={canvasRef} className="flex-1 h-full outline-none" onKeyDown={onKeyDown} tabIndex={0}>
       <ReactFlow
-        nodes={nodes}
+        nodes={displayNodes}
         edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

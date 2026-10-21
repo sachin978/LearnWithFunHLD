@@ -1,14 +1,14 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { COMPONENTS, CATEGORIES, CATEGORY_COLORS } from "@/lib/simulator/components-data";
 import { ComponentIcon } from "@/lib/simulator/icon-registry";
 import { PROBLEMS_BY_DIFFICULTY } from "@/lib/simulator/problems-data";
-import type { ComponentCategory } from "@/lib/simulator/components-data";
+import type { ComponentCategory, ComponentDef } from "@/lib/simulator/components-data";
 
-function DraggableComponent({ id, name, icon, category, rpsCapacity }: { id: string; name: string; icon: string; category: ComponentCategory; rpsCapacity: number }) {
+function DraggableComponent({ id, name, icon, category, rpsCapacity, isCustom }: { id: string; name: string; icon: string; category: ComponentCategory; rpsCapacity: number; isCustom?: boolean }) {
   const c = CATEGORY_COLORS[category];
   return (
     <div
@@ -17,7 +17,8 @@ function DraggableComponent({ id, name, icon, category, rpsCapacity }: { id: str
         e.dataTransfer.setData("application/wireup-system", id);
         e.dataTransfer.effectAllowed = "move";
       }}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${c.border} ${c.bg} cursor-grab active:cursor-grabbing hover:brightness-125 hover:-translate-y-0.5 active:scale-[0.98] transition-[filter,transform] duration-150 select-none`}
+      title={isCustom ? `${name} (custom component)` : undefined}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isCustom ? "border-dashed" : ""} ${c.border} ${c.bg} cursor-grab active:cursor-grabbing hover:brightness-125 hover:-translate-y-0.5 active:scale-[0.98] transition-[filter,transform] duration-150 select-none`}
     >
       <ComponentIcon iconKey={icon} size={16} className={c.text} />
       <div className="flex-1 min-w-0">
@@ -28,10 +29,104 @@ function DraggableComponent({ id, name, icon, category, rpsCapacity }: { id: str
   );
 }
 
+/** Modal for defining a new reusable custom component (e.g. "Order Service") —
+ * it's added to the same library used everywhere else, so once created it
+ * drags, connects, and edits exactly like a built-in component. */
+function NewCustomComponentModal({ onClose }: { onClose: () => void }) {
+  const addCustomComponent = useSimulatorStore((s) => s.addCustomComponent);
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState<ComponentCategory>("Compute");
+  const [rpsCapacity, setRpsCapacity] = useState(10);
+
+  const create = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const def: ComponentDef = {
+      id: `custom-${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()}`,
+      name: trimmed,
+      category,
+      rpsCapacity: Math.max(0, rpsCapacity),
+      latencyMs: 10,
+      scalable: true,
+      stateful: false,
+      description: "User-defined custom component",
+      icon: "wrench",
+      color: "violet",
+    };
+    addCustomComponent(def);
+    onClose();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-zinc-900 border border-zinc-700 rounded-2xl p-5 w-80 shadow-2xl"
+      >
+        <div className="text-white font-semibold mb-3">New Custom Component</div>
+
+        <label className="text-zinc-400 text-xs mb-1 block">Name</label>
+        <input
+          autoFocus
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && create()}
+          placeholder="e.g. Order Service"
+          className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40 mb-3"
+        />
+
+        <label className="text-zinc-400 text-xs mb-1 block">Category</label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ComponentCategory)}
+          className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40 mb-3"
+        >
+          {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+        </select>
+
+        <label className="text-zinc-400 text-xs mb-1 block">RPS Capacity (k/s)</label>
+        <input
+          type="number"
+          min={0}
+          value={rpsCapacity}
+          onChange={(e) => setRpsCapacity(Number(e.target.value))}
+          className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40 mb-4"
+        />
+
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="px-4 py-1.5 text-sm text-zinc-400 hover:text-white transition-colors">Cancel</button>
+          <motion.button
+            onClick={create}
+            disabled={!name.trim()}
+            whileHover={{ scale: name.trim() ? 1.03 : 1 }}
+            whileTap={{ scale: name.trim() ? 0.97 : 1 }}
+            className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          >
+            Create
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function Sidebar() {
-  const { leftTab, setLeftTab, setActiveProblem, activeProblem, leftPanelCollapsed, setLeftPanelCollapsed } = useSimulatorStore();
+  const { leftTab, setLeftTab, setActiveProblem, activeProblem, leftPanelCollapsed, setLeftPanelCollapsed, customComponents } = useSimulatorStore();
   const [search, setSearch] = useState("");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORIES));
+  const [newComponentOpen, setNewComponentOpen] = useState(false);
 
   const toggleCategory = (cat: string) => {
     setExpandedCategories((prev) => {
@@ -41,7 +136,11 @@ export default function Sidebar() {
     });
   };
 
-  const filtered = COMPONENTS.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+  // Custom components live in the same library everywhere they're used —
+  // search, category grouping, drag-and-drop all just see one merged list.
+  const allComponents = [...COMPONENTS, ...customComponents];
+  const customIds = new Set(customComponents.map((c) => c.id));
+  const filtered = allComponents.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <motion.div
@@ -103,7 +202,7 @@ export default function Sidebar() {
             {/* Components panel — only reachable once a problem is active */}
             {leftTab === "components" && activeProblem && (
               <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="p-2">
+                <div className="p-2 space-y-2">
                   <input
                     type="text"
                     placeholder="Search components…"
@@ -111,20 +210,27 @@ export default function Sidebar() {
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/40"
                   />
+                  <button
+                    onClick={() => setNewComponentOpen(true)}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-zinc-700 text-zinc-400 text-xs font-medium hover:border-indigo-500/50 hover:text-indigo-300 transition-colors"
+                  >
+                    <Plus size={13} /> New Custom Component
+                  </button>
                 </div>
                 <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-2 scrollbar-thin scrollbar-track-zinc-950 scrollbar-thumb-zinc-700">
                   {search ? (
                     <div className="space-y-1.5">
                       {filtered.map((c) => (
-                        <DraggableComponent key={c.id} {...c} />
+                        <DraggableComponent key={c.id} {...c} isCustom={customIds.has(c.id)} />
                       ))}
                       {filtered.length === 0 && <p className="text-zinc-500 text-xs text-center py-4">No components found</p>}
                     </div>
                   ) : (
                     CATEGORIES.map((cat) => {
-                      const items = COMPONENTS.filter((c) => c.category === cat);
+                      const items = allComponents.filter((c) => c.category === cat);
                       const isOpen = expandedCategories.has(cat);
                       const colors = CATEGORY_COLORS[cat];
+                      if (items.length === 0) return null;
                       return (
                         <div key={cat}>
                           <button
@@ -143,7 +249,7 @@ export default function Sidebar() {
                                 transition={{ duration: 0.2, ease: "easeOut" }}
                                 className="space-y-1 mt-1 ml-1 overflow-hidden"
                               >
-                                {items.map((c) => <DraggableComponent key={c.id} {...c} />)}
+                                {items.map((c) => <DraggableComponent key={c.id} {...c} isCustom={customIds.has(c.id)} />)}
                               </motion.div>
                             )}
                           </AnimatePresence>
@@ -154,6 +260,10 @@ export default function Sidebar() {
                 </div>
               </div>
             )}
+
+            <AnimatePresence>
+              {newComponentOpen && <NewCustomComponentModal onClose={() => setNewComponentOpen(false)} />}
+            </AnimatePresence>
 
             {/* Problems panel — also the fallback if "components" was somehow
                 left active with no problem selected */}

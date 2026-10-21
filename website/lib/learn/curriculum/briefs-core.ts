@@ -1,0 +1,287 @@
+import type { ConceptBrief } from "./types";
+
+/** Interview method + web/backend/data fundamentals. */
+export const BRIEFS_CORE: ConceptBrief[] = [
+  {
+    slug: "interview-framework",
+    title: "The system design interview framework",
+    shortTitle: "The interview framework",
+    stage: 11,
+    minutes: 15,
+    summary: "A repeatable 7-step approach for any unfamiliar design question, and how to pace a 45-minute interview.",
+    problem:
+      "Most candidates who struggle don't lack knowledge — they jump straight to drawing boxes, design for the wrong requirements, run out of time, or never explain **why** they chose anything. Interviewers grade the process as much as the diagram.",
+    simple:
+      "Treat the interview as a conversation with a structure: agree on what you're building, size it, define the interface, sketch the big picture, zoom into the hard parts, then stress-test it and discuss alternatives.",
+    analogy: "An architect doesn't pour concrete before asking how many people will live in the house. Requirements first, blueprint second, details last.",
+    howItWorks: [
+      "**1. Clarify requirements (~5 min):** functional (what users do) and non-functional (scale, latency, availability, consistency). Write them down and confirm scope.",
+      "**2. Define scale (~5 min):** users, requests per second, read/write ratio, storage per year. Round aggressively — the goal is the order of magnitude.",
+      "**3. APIs & data model (~5 min):** the few endpoints that matter and the core entities. This anchors everything that follows.",
+      "**4. High-level architecture (~10 min):** clients → load balancer → services → data stores, plus caches/queues where justified. Walk one request end to end.",
+      "**5. Deep dives (~10 min):** pick the 1–2 hardest parts (often the ones the interviewer nudges toward) and go deep: data partitioning, caching strategy, consistency.",
+      "**6. Bottlenecks & failures (~5 min):** what breaks first at 10× load? What happens when a node, a region or a dependency fails?",
+      "**7. Trade-offs & alternatives (ongoing):** say what you chose, what you rejected, and what would make you change your mind.",
+    ],
+    whenToUse: ["Every open-ended design question (\"Design X\").", "Even when the interviewer drives — use it to keep yourself oriented."],
+    whenNotToUse: ["Don't recite it mechanically. If the interviewer wants to skip to a deep dive, follow them — the framework is a guide, not a script."],
+    tradeoffs: {
+      pros: ["Prevents designing for the wrong problem", "Makes your reasoning visible", "Helps manage time"],
+      cons: ["Spending 15 minutes on requirements leaves no time for depth — keep early steps brisk"],
+      decide: "Spend roughly a third of the time on steps 1–3 and two thirds on architecture, deep dives and trade-offs.",
+    },
+    questions: [
+      {
+        q: "What non-functional requirements should you always ask about?",
+        short: "Scale (users, QPS, data size), latency targets, availability, consistency needs, and durability.",
+        detailed: ["Then state assumptions explicitly when the interviewer says \"you decide\" — e.g. \"I'll assume 100M DAU and that a few seconds of staleness in the feed is fine.\""],
+      },
+      { q: "The interviewer says \"design Twitter\". What's your first move?", short: "Narrow the scope: which features (post, follow, timeline?), which scale, and what matters most (latency of reading the timeline)." },
+    ],
+    mistakes: [
+      { weak: "\"We'll use Kafka, Redis and Cassandra.\" — tech names before requirements.", strong: "\"Reads outnumber writes about 100:1 and timelines must load in under 200 ms, so I'll precompute timelines and cache them.\"" },
+      { weak: "Silently drawing for 10 minutes.", strong: "Narrate decisions as you draw and check in: \"Does this match what you had in mind?\"" },
+    ],
+    recap: ["Requirements → scale → API/data → architecture → deep dives → failures → trade-offs.", "Narrate the why behind each decision.", "Keep the first three steps short."],
+    recall: {
+      prompt: "You're 3 minutes into \"Design a URL shortener\". What should you do next?",
+      options: [
+        { text: "Pick a database (e.g. Cassandra) and explain why", verdict: "weak", why: "Choosing technology before you know the read/write ratio or scale is premature." },
+        { text: "Confirm features and estimate scale: URLs per day, read/write ratio, retention", verdict: "best", why: "Those numbers decide storage size, caching strategy and ID length." },
+        { text: "Draw the full architecture with every component", verdict: "weak", why: "Without requirements you can't justify any component." },
+        { text: "Ask which features are in scope (custom aliases? analytics? expiry?)", verdict: "valid", why: "Part of clarifying requirements — combine it with the scale estimate." },
+      ],
+    },
+    prerequisites: [],
+    deeper: [
+      { label: "Back-of-the-envelope estimation", href: "/learn/concepts/estimation", kind: "brief" },
+      { label: "APIs & data modeling", href: "/learn/concepts/api-data-modeling", kind: "brief" },
+      { label: "Walkthrough: URL shortener", href: "/learn/designs/url-shortener", kind: "design" },
+      { label: "Timed mock interview in the simulator", href: "/simulator", kind: "simulator" },
+    ],
+  },
+
+  {
+    slug: "estimation",
+    title: "Back-of-the-envelope estimation",
+    shortTitle: "Capacity estimation",
+    stage: 11,
+    minutes: 10,
+    summary: "Turn users into requests per second, storage and bandwidth in two minutes — and use the numbers to justify design choices.",
+    problem: "A design for 1,000 users and one for 100 million look completely different. Without numbers you can't tell whether you need sharding, caching or just one database.",
+    simple: "Start from daily active users, multiply by actions per user, divide by seconds in a day. Round everything to powers of ten.",
+    howItWorks: [
+      "**Requests per second:** DAU × actions/day ÷ ~100,000 (a day is 86,400 s — round to 10⁵). 100M users × 10 reads ÷ 10⁵ ≈ **10,000 reads/s**. Peak ≈ 2–3× average.",
+      "**Read/write ratio:** decides whether to optimise reads (caches, replicas) or writes (partitioning, queues).",
+      "**Storage:** writes/day × bytes per item × retention. 1M new items × 1 KB × 365 days × 5 years ≈ **1.8 TB**.",
+      "**Bandwidth:** requests/s × response size. 10,000/s × 100 KB = 1 GB/s — a signal for a CDN.",
+      "**Useful anchors:** a single well-tuned relational DB handles thousands of simple queries/s; memory reads are ~100 ns, SSD ~100 µs, a cross-region round trip ~100 ms.",
+    ],
+    whenToUse: ["Right after requirements, to decide whether scale features are even needed.", "When justifying a component: \"10k reads/s on hot keys → cache.\""],
+    whenNotToUse: ["Don't spend 10 minutes on precise arithmetic. Orders of magnitude are enough."],
+    tradeoffs: {
+      pros: ["Grounds every later decision", "Shows engineering judgement"],
+      cons: ["Over-precision wastes time and invites arithmetic mistakes"],
+      decide: "State assumptions out loud, round to 10ⁿ, and move on within ~3 minutes.",
+    },
+    questions: [{ q: "How many seconds are in a day, for estimation purposes?", short: "86,400 — round to 10⁵ to make division easy." }],
+    mistakes: [
+      { weak: "Skipping estimation, then adding sharding \"to be safe\".", strong: "\"About 2 TB over 5 years fits on one primary with replicas — sharding isn't needed yet.\"" },
+    ],
+    recap: ["DAU × actions ÷ 10⁵ = average QPS; peak ≈ 2–3×.", "Storage = items/day × size × retention.", "Use numbers to justify — or rule out — components."],
+    recall: {
+      prompt: "50M daily users each upload 2 photos of ~500 KB. Roughly how much new storage per day?",
+      options: [
+        { text: "~5 GB", verdict: "weak", why: "Off by 10,000×: 50M × 2 × 500 KB = 50 TB." },
+        { text: "~50 TB", verdict: "best", why: "10⁸ photos × 5×10⁵ bytes = 5×10¹³ bytes ≈ 50 TB/day — object storage + CDN, not a database." },
+        { text: "~500 TB", verdict: "weak", why: "10× too high; recheck the multiplication." },
+      ],
+    },
+    prerequisites: ["interview-framework"],
+    deeper: [{ label: "Walkthrough: file storage service", href: "/learn/designs/file-storage", kind: "design" }],
+  },
+
+  {
+    slug: "api-data-modeling",
+    title: "APIs and data modeling",
+    shortTitle: "APIs & data models",
+    stage: 11,
+    minutes: 10,
+    summary: "Define the handful of endpoints and entities that anchor the rest of your design.",
+    problem: "Architecture discussions drift when nobody has agreed what the system's interface is or what data it stores.",
+    simple: "List the few API calls users make and the core tables/collections they touch. Keep it small — 3–5 endpoints is plenty.",
+    howItWorks: [
+      "**Endpoints:** verb + resource + key parameters, e.g. `POST /urls {long_url}` → `{short_code}`, `GET /{code}` → 301 redirect.",
+      "**Pagination:** for lists, use cursor-based pagination (`?cursor=…&limit=20`) — offsets get slow and skip items when data changes.",
+      "**Entities:** fields, primary key and the access pattern that will query them. The access pattern drives the database choice and indexes.",
+      "**Idempotency:** for create/payment endpoints, accept an idempotency key so client retries don't duplicate work.",
+    ],
+    whenToUse: ["Step 3 of every design.", "Whenever a deep dive depends on how data is queried."],
+    whenNotToUse: ["Don't write full schemas with every column — focus on keys and access patterns."],
+    tradeoffs: {
+      pros: ["Forces clarity on access patterns", "Makes DB and caching choices defensible"],
+      cons: ["Too much detail eats time"],
+      decide: "Model only what a deep dive will need.",
+    },
+    questions: [
+      { q: "Why prefer cursor pagination for a feed?", short: "It stays fast with deep pages and doesn't skip/duplicate items when new posts arrive." },
+      { q: "REST or gRPC for public APIs?", short: "REST/JSON for public, browser-facing APIs; gRPC is common between internal services for performance and typed contracts." },
+    ],
+    mistakes: [{ weak: "Designing tables without saying how they're queried.", strong: "\"We fetch a user's timeline by user_id ordered by time, so the key is (user_id, created_at).\"" }],
+    recap: ["3–5 endpoints, core entities, access patterns.", "Cursor pagination for lists.", "Idempotency keys for unsafe operations."],
+    recall: {
+      prompt: "A client retries `POST /payments` after a timeout. How do you avoid charging twice?",
+      options: [
+        { text: "Tell clients never to retry", verdict: "weak", why: "Networks fail; retries are necessary." },
+        { text: "Require an idempotency key and store results keyed by it", verdict: "best", why: "A repeated key returns the original result instead of charging again." },
+        { text: "Use GET instead of POST", verdict: "weak", why: "GET must be safe; it doesn't solve duplicate side effects." },
+      ],
+    },
+    prerequisites: ["http-request-flow"],
+    deeper: [
+      { label: "Reliability: retries & idempotency", href: "/learn/concepts/reliability-patterns", kind: "brief" },
+      { label: "Databases: SQL vs NoSQL & indexes", href: "/learn/concepts/databases", kind: "brief" },
+    ],
+  },
+
+  {
+    slug: "http-request-flow",
+    title: "HTTP, APIs and the backend request flow",
+    shortTitle: "Request flow",
+    stage: 1,
+    minutes: 10,
+    summary: "What actually happens between typing a URL and seeing a page — the path every design builds on.",
+    problem: "Every system design diagram is a variation of one request travelling from a client to data and back. If that path is fuzzy, every later component is too.",
+    simple: "The browser finds the server's address (DNS), opens a secure connection (TLS), sends an HTTP request, and a server runs code, reads data, and sends back a response.",
+    analogy: "Looking up a restaurant's address (DNS), calling ahead (TCP/TLS handshake), placing an order (request) and receiving the dish (response).",
+    howItWorks: [
+      "**DNS** maps a name to an IP address; results are cached by the browser, OS and resolvers.",
+      "**TCP + TLS** establish a reliable, encrypted connection (HTTPS). Reusing connections (keep-alive, HTTP/2) avoids repeating the handshake.",
+      "**HTTP request:** method (GET/POST/PUT/DELETE), path, headers, optional body. **Response:** status code (2xx success, 4xx client error, 5xx server error), headers, body (often JSON).",
+      "**Server side:** load balancer → stateless app server (auth, validation, business logic) → database or cache.",
+      "**Latency** is time per request; **throughput** is requests handled per second; **bandwidth** is data per second the link can carry.",
+    ],
+    sceneId: "request-flow",
+    whenToUse: ["Walking through \"what happens when a user does X\" in any design."],
+    whenNotToUse: ["Don't describe TCP packet details in a design interview unless asked."],
+    tradeoffs: {
+      pros: ["A shared mental model of every component's role"],
+      cons: ["Each hop adds latency and a failure point"],
+      decide: "Add a hop (cache, gateway, queue) only when it buys something you can name.",
+    },
+    questions: [
+      { q: "What's the difference between 401 and 403?", short: "401: not authenticated (who are you?). 403: authenticated but not allowed." },
+      { q: "Why keep app servers stateless?", short: "Any server can handle any request, so you can add/remove servers behind a load balancer freely. Session state goes to a shared store." },
+    ],
+    mistakes: [{ weak: "\"The request goes to the server and then the database.\"", strong: "\"DNS resolves to the load balancer, which forwards to one of N stateless app servers; they read from a cache, falling back to the primary DB.\"" }],
+    recap: ["DNS → TLS → HTTP → LB → app → data → response.", "Status codes: 2xx/4xx/5xx.", "Stateless servers scale horizontally."],
+    recall: {
+      prompt: "Users complain pages are slow, but your app server CPU is at 10%. Where would you look first?",
+      options: [
+        { text: "Add more app servers", verdict: "weak", why: "Low CPU means servers aren't the bottleneck." },
+        { text: "Database query latency and missing indexes", verdict: "best", why: "Servers waiting on slow queries look idle — check DB time per request." },
+        { text: "Network latency between client and server (e.g. far-away region)", verdict: "valid", why: "Also plausible — a CDN or closer region helps static content and round trips." },
+      ],
+    },
+    prerequisites: [],
+    deeper: [
+      { label: "Load balancing & horizontal scaling", href: "/learn/concepts/load-balancing", kind: "brief" },
+      { label: "Caching & Redis", href: "/learn/concepts/caching", kind: "brief" },
+    ],
+  },
+
+  {
+    slug: "databases",
+    title: "SQL vs NoSQL and database indexes",
+    shortTitle: "Databases & indexes",
+    stage: 3,
+    minutes: 12,
+    summary: "How to choose a database from access patterns, and why indexes make reads fast and writes slower.",
+    problem: "The database is usually the hardest component to scale and the most expensive to change later. Picking it by popularity rather than access pattern causes pain.",
+    simple: "Relational (SQL) databases store rows in tables with relationships and strong guarantees. NoSQL databases trade some of that for flexible schemas or easier horizontal scaling. Indexes are lookup structures that make finding rows fast.",
+    analogy: "An index is the index at the back of a textbook: you find \"caching\" on page 212 without reading every page — but every new edition has to update it.",
+    howItWorks: [
+      "**SQL (PostgreSQL, MySQL):** schemas, joins, transactions with ACID guarantees. Great default for most business data. Scales reads with replicas; writes need sharding at very high scale.",
+      "**NoSQL families:** key-value (Redis, DynamoDB) for lookups by key; document (MongoDB) for nested, flexible records; wide-column (Cassandra) for huge write volumes partitioned by key; graph for relationship traversal.",
+      "**Indexes (usually B-trees):** turn a full table scan into a logarithmic lookup. A composite index on `(user_id, created_at)` serves \"latest posts by user\".",
+      "**Cost:** every index slows inserts/updates and uses storage. Index the columns you filter, join and sort by — not everything.",
+      "**Transactions (ACID):** atomic, consistent, isolated, durable — essential for money, inventory and bookings.",
+    ],
+    whenToUse: ["SQL: relational data, transactions, ad-hoc queries, when unsure.", "NoSQL: very high write throughput, simple key-based access, flexible schema, or data that partitions cleanly by key."],
+    whenNotToUse: ["Don't pick NoSQL just for \"scale\" when your data is relational and fits comfortably in SQL.", "Don't index every column."],
+    tradeoffs: {
+      pros: ["SQL: strong consistency, joins, mature tooling", "NoSQL: horizontal scale and flexible schemas"],
+      cons: ["SQL: write scaling is harder", "NoSQL: weaker joins/transactions, data modelled per query"],
+      decide: "Start from the access pattern and consistency need; justify NoSQL with a specific requirement.",
+    },
+    questions: [
+      { q: "Why might a query be slow even with an index?", short: "The index doesn't match the filter/sort order, low selectivity, or functions on the column prevent its use." },
+      { q: "When would you choose Cassandra?", short: "Massive write throughput with queries known up front and partitioned by key (e.g. messages by conversation_id), accepting tunable consistency." },
+    ],
+    mistakes: [{ weak: "\"NoSQL because it scales better.\"", strong: "\"Messages are written at 100k/s and always read by conversation, so a wide-column store partitioned by conversation_id fits.\"" }],
+    recap: ["Choose by access pattern and consistency needs.", "Indexes speed reads, slow writes.", "SQL is a strong default."],
+    recall: {
+      prompt: "A `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 20` is slow on 50M rows. Best first fix?",
+      options: [
+        { text: "Move to NoSQL", verdict: "weak", why: "A big migration for something an index fixes." },
+        { text: "Add a composite index on (user_id, created_at)", verdict: "best", why: "Matches the filter and the sort, so the DB reads exactly 20 index entries." },
+        { text: "Cache the results", verdict: "valid", why: "Can help hot users, but fix the query first — caches hide, not cure, slow queries." },
+      ],
+    },
+    prerequisites: ["http-request-flow"],
+    deeper: [
+      { label: "Replication & sharding", href: "/learn/concepts/replication-sharding", kind: "brief" },
+      { label: "Caching & Redis", href: "/learn/concepts/caching", kind: "brief" },
+    ],
+  },
+
+  {
+    slug: "caching",
+    title: "Caching and Redis",
+    shortTitle: "Caching",
+    stage: 4,
+    minutes: 10,
+    summary: "Serve repeated reads from memory, and handle the hard part: stale data and invalidation.",
+    problem: "Many systems read the same data far more often than it changes. Hitting the database for every read wastes capacity and adds latency.",
+    simple: "Keep a copy of frequently read data in fast memory (like Redis). Check the copy first; only go to the database when it's missing.",
+    analogy: "Keeping your most-used tools on the desk instead of walking to the garage each time — but if someone swaps a tool in the garage, your desk copy is out of date.",
+    howItWorks: [
+      "**Cache-aside (lazy loading):** read cache → on miss read DB → write to cache with a TTL. On write, update the DB and delete the cache key. The most common pattern.",
+      "**Write-through:** write to cache and DB together — cache always fresh, writes slower. **Write-back:** write to cache, flush to DB later — fast writes, risk of data loss.",
+      "**TTL and eviction:** TTL bounds staleness; when memory is full, eviction policies like LRU drop the least recently used keys.",
+      "**Hit ratio** is what matters: caching data that's rarely re-read just burns memory.",
+      "**Thundering herd:** when a hot key expires, thousands of requests hit the DB at once. Mitigate with request coalescing, locks, or staggered TTLs.",
+    ],
+    sceneId: "cache-aside",
+    whenToUse: ["Read-heavy workloads with hot keys (profiles, product pages, timelines).", "Expensive computations whose results can be reused."],
+    whenNotToUse: ["Data that must always be perfectly fresh (account balances at payment time).", "Write-heavy data with low re-read rates."],
+    tradeoffs: {
+      pros: ["Lower latency (~1 ms vs ~10 ms+)", "Offloads the database"],
+      cons: ["Stale data", "Invalidation complexity", "Memory cost", "Another component to run"],
+      decide: "Cache when reads ≫ writes and slight staleness is acceptable; state the TTL and invalidation strategy.",
+    },
+    questions: [
+      { q: "How do you keep cache and database consistent?", short: "Cache-aside with delete-on-write plus a TTL as a safety net; accept brief staleness, or use write-through where freshness matters." },
+      { q: "What happens if Redis goes down?", short: "Requests fall back to the database — which may then be overloaded. Plan capacity, use replicas, and rate-limit fallbacks." },
+    ],
+    mistakes: [
+      { weak: "\"Add Redis to make it fast.\"", strong: "\"Product pages are read 1,000× more than updated, so cache-aside with a 5-minute TTL and invalidate on price change.\"" },
+      { weak: "Ignoring invalidation entirely.", strong: "Name the strategy: TTL, delete-on-write, or versioned keys." },
+    ],
+    recap: ["Cache-aside is the default pattern.", "TTL bounds staleness; invalidate on write.", "Justify with the read/write ratio."],
+    recall: {
+      prompt: "Your database is receiving too many repeated reads for the same product pages. What would you consider first?",
+      options: [
+        { text: "A cache (cache-aside with TTL) in front of the DB", verdict: "best", why: "Repeated identical reads are exactly what caching serves best." },
+        { text: "Read replicas", verdict: "valid", why: "Also spreads reads, but each read still does DB work; good when reads are varied rather than repeated." },
+        { text: "Shard the database", verdict: "weak", why: "Sharding addresses data size and write scale, not repeated reads." },
+        { text: "A CDN for the page HTML/assets", verdict: "valid", why: "Great for public, cacheable responses and static assets." },
+      ],
+    },
+    prerequisites: ["databases"],
+    deeper: [
+      { label: "CDN & object storage", href: "/learn/concepts/cdn-object-storage", kind: "brief" },
+      { label: "Walkthrough: news feed", href: "/learn/designs/news-feed", kind: "design" },
+    ],
+  },
+];

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon, Maximize2, Minimize2, Download, HelpCircle } from "lucide-react";
+import { Sun, Moon, Maximize2, Minimize2, Download, HelpCircle, Undo2, Redo2 } from "lucide-react";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { scoreArchitecture } from "@/lib/simulator/scoring";
 import { generateDesignSummary, downloadTextFile } from "@/lib/simulator/exportSummary";
@@ -19,6 +19,7 @@ export default function Toolbar() {
     setInterviewActive, setInterviewPhase, setInterviewTimeLeft,
     simTheme, setSimTheme, setTourOpen,
     leftPanelCollapsed, rightPanelCollapsed, setLeftPanelCollapsed, setRightPanelCollapsed,
+    past, future, undo, redo,
   } = useSimulatorStore();
 
   const isFocusMode = leftPanelCollapsed && rightPanelCollapsed;
@@ -122,6 +123,32 @@ export default function Toolbar() {
         )}
 
         <div className="flex-1" />
+
+        {/* Undo / redo */}
+        <div className="flex items-center gap-0.5 mr-1">
+          <motion.button
+            onClick={undo}
+            disabled={past.length === 0}
+            whileHover={{ scale: past.length === 0 ? 1 : 1.08 }}
+            whileTap={{ scale: past.length === 0 ? 1 : 0.92 }}
+            transition={{ duration: 0.15 }}
+            title="Undo (Ctrl+Z)"
+            className="p-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 disabled:hover:border-zinc-700 disabled:hover:text-zinc-400 disabled:cursor-not-allowed transition-colors"
+          >
+            <Undo2 size={14} />
+          </motion.button>
+          <motion.button
+            onClick={redo}
+            disabled={future.length === 0}
+            whileHover={{ scale: future.length === 0 ? 1 : 1.08 }}
+            whileTap={{ scale: future.length === 0 ? 1 : 0.92 }}
+            transition={{ duration: 0.15 }}
+            title="Redo (Ctrl+Shift+Z)"
+            className="p-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white disabled:opacity-30 disabled:hover:border-zinc-700 disabled:hover:text-zinc-400 disabled:cursor-not-allowed transition-colors"
+          >
+            <Redo2 size={14} />
+          </motion.button>
+        </div>
 
         {/* Interview timer */}
         {interviewActive && (

@@ -1,16 +1,76 @@
 "use client";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { CATEGORY_COLORS } from "@/lib/simulator/components-data";
+import { Plus } from "lucide-react";
+import { CATEGORY_COLORS, COMPONENTS } from "@/lib/simulator/components-data";
 import { ComponentIcon } from "@/lib/simulator/icon-registry";
 import { useSimulatorStore } from "@/lib/simulator/store";
 import { calculateUtilization, getTrafficColor, TRAFFIC_STATUS_LABEL } from "@/lib/simulator/traffic";
 import type { NodeData } from "@/lib/simulator/store";
 import type { ComponentCategory } from "@/lib/simulator/components-data";
 
+/** The "+" button's picker — only ever mounted while a node is selected and
+ * open, so it can afford to hold its own search state locally. Adding an
+ * item wires a new node onto the selected one via the same store action
+ * used everywhere else nodes get created. */
+function AddComponentMenu({ sourceId, onClose }: { sourceId: string; onClose: () => void }) {
+  const customComponents = useSimulatorStore((s) => s.customComponents);
+  const addConnectedNode = useSimulatorStore((s) => s.addConnectedNode);
+  const [search, setSearch] = useState("");
+
+  const options = [...COMPONENTS, ...customComponents].filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  return (
+    <>
+      {/* Invisible click-catcher — closes the menu on outside click without
+          dimming the canvas like a real modal would. */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="nodrag nopan absolute left-full bottom-0 ml-2 z-50 w-48 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden"
+      >
+        <input
+          autoFocus
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Add component…"
+          className="w-full bg-zinc-800 border-b border-zinc-700 px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 outline-none"
+        />
+        <div className="max-h-52 overflow-y-auto py-1">
+          {options.map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => {
+                addConnectedNode(sourceId, {
+                  componentId: opt.id,
+                  label: opt.name,
+                  rpsCapacity: opt.rpsCapacity,
+                  category: opt.category,
+                  icon: opt.icon,
+                  color: opt.color,
+                });
+                onClose();
+              }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-zinc-800 transition-colors"
+            >
+              <ComponentIcon iconKey={opt.icon} size={13} className="text-zinc-400 flex-shrink-0" />
+              <span className="text-white text-xs truncate">{opt.name}</span>
+            </button>
+          ))}
+          {options.length === 0 && <p className="text-zinc-500 text-[11px] text-center py-3">No matches</p>}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function ComponentNode({ id, data, selected }: NodeProps) {
   const d = data as NodeData;
   const c = CATEGORY_COLORS[d.category as ComponentCategory] ?? CATEGORY_COLORS.Compute;
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   // Once a simulation has been run, border/background shift onto a live
   // capacity-based traffic color for this node — category colors are the
@@ -43,6 +103,26 @@ function ComponentNode({ id, data, selected }: NodeProps) {
       `}
     >
       <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !border-2 !border-zinc-600 !bg-zinc-900" />
+
+      {/* Quick-add — only reachable once this node is selected, so it never
+          clutters an unselected canvas. Adds a new node wired to this one. */}
+      {selected && (
+        // Bottom-right corner, not the right edge — the source Handle already
+        // owns the right-edge midpoint, so this sits clear of it.
+        <div className="nodrag nopan absolute -bottom-3 -right-3 z-10">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setAddMenuOpen((v) => !v);
+            }}
+            title="Add connected component"
+            className="w-6 h-6 rounded-full bg-indigo-600 hover:bg-indigo-500 border-2 border-zinc-950 text-white flex items-center justify-center shadow-lg transition-colors"
+          >
+            <Plus size={13} strokeWidth={2.5} />
+          </button>
+          {addMenuOpen && <AddComponentMenu sourceId={id} onClose={() => setAddMenuOpen(false)} />}
+        </div>
+      )}
 
       <div className="px-3 py-2.5">
         <div className="flex items-center gap-2 mb-1">
