@@ -145,17 +145,14 @@ export function ChapterLab({ chapterId }: { chapterId: string }) {
               <h4 className="text-white font-semibold mb-3">Production checklist</h4>
               <ul className="space-y-1.5">
                 {PRODUCTION_CHECKLIST.map((c) => (
-                  <li key={c} className="flex gap-2 text-sm text-zinc-300">
-                    <span className="text-emerald-400" aria-hidden>
-                      ☐
-                    </span>
+                  <li key={c} className="relative pl-4 text-sm text-zinc-300 before:absolute before:left-0 before:top-2 before:h-1.5 before:w-1.5 before:rounded-full before:bg-emerald-400/70">
                     {c}
                   </li>
                 ))}
               </ul>
             </div>
           </div>
-          <KnowledgeCheck questions={FINAL_ASSESSMENT} title="Final assessment" />
+          <KnowledgeCheck questions={FINAL_ASSESSMENT} title="Final assessment" trackAs="rabbitmq-final" id="final-assessment" />
           <SimulatorLink>
             Ready to apply it? Open the simulator, pick a problem like a notification system, and design it with a <strong className="text-white">Message Queue</strong>.
           </SimulatorLink>

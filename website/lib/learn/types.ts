@@ -12,6 +12,8 @@ export interface QuizQuestion {
   options: Rich[];
   answer: number;
   explanation: Rich;
+  /** Optional per-option feedback ("why not this one?"), same order as `options`. */
+  optionWhy?: Rich[];
 }
 
 export interface InterviewQuestion {

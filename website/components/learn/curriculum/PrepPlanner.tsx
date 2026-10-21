@@ -7,6 +7,10 @@ import { BookOpen, CalendarDays, Layers, PenTool, Sparkles, Timer, ListChecks, A
 import { cn } from "@/lib/utils";
 import { FINAL_CHECKLIST, PREP_HORIZONS, PREP_PLANS, planMinutes, type PrepHorizon, type TaskKind } from "@/lib/learn/curriculum/prep";
 import { PREP_PROGRESS_KEY, PROGRESS_EVENT, parsePrepProgress, savePrepProgress, type PrepProgress } from "@/lib/learn/progress";
+import { useLearningState, type LearningState } from "@/lib/learn/learning-state";
+import { WORKFLOW } from "@/lib/learn/curriculum/types";
+import { trackLearning } from "@/lib/learn/analytics";
+import type { PrepTask } from "@/lib/learn/curriculum/prep";
 
 const KIND: Record<TaskKind, { label: string; icon: typeof BookOpen; cls: string }> = {
   learn: { label: "Learn", icon: BookOpen, cls: "text-amber-300" },
@@ -34,6 +38,23 @@ function snapshot() {
 
 const fmt = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${min % 60 ? `${min % 60} min` : ""}`.trim() : `${min} min`);
 
+/** Status of the lesson a task links to — from recorded actions, never implying mastery. */
+function linkedStatus(t: PrepTask, learning: LearningState): { label: string; cls: string } | null {
+  const slug = t.href.split("/").pop()?.split("#")[0] ?? "";
+  if (t.kind === "learn") {
+    const p = learning.briefs[slug];
+    if (p?.recall === "best") return { label: "Self-test: strong", cls: "text-emerald-300 border-emerald-500/30" };
+    if (p?.recall === "valid") return { label: "Self-test: partly right", cls: "text-amber-300 border-amber-500/30" };
+    if (p?.recall === "weak") return { label: "Self-test: missed", cls: "text-rose-300 border-rose-500/30" };
+    if (p?.openedAt) return { label: "Opened", cls: "text-zinc-400 border-border" };
+  }
+  if (t.kind === "design") {
+    const n = learning.designs[slug]?.revealed.length ?? 0;
+    if (n > 0) return { label: `${n}/${WORKFLOW.length} steps attempted`, cls: n >= WORKFLOW.length ? "text-emerald-300 border-emerald-500/30" : "text-amber-300 border-amber-500/30" };
+  }
+  return null;
+}
+
 function parseHorizon(v: string | null): PrepHorizon | null {
   const n = Number(v);
   return n === 1 || n === 3 || n === 7 ? n : null;
@@ -49,6 +70,7 @@ export function PrepPlanner() {
   const router = useRouter();
   const pathname = usePathname();
   const raw = useSyncExternalStore(subscribe, snapshot, () => "");
+  const learning = useLearningState();
   const [memory, setMemory] = useState<PrepProgress | null>(null);
   const progress = useMemo(() => memory ?? parsePrepProgress(raw || null), [memory, raw]);
 
@@ -72,6 +94,7 @@ export function PrepPlanner() {
     if (set.has(id)) set.delete(id);
     else set.add(id);
     persist({ ...progress, last: horizon, done: { ...progress.done, [key]: [...set] } });
+    trackLearning("prep_task_toggled", { plan: key, task: id, done: set.has(id) });
   };
 
   const allTasks = plan ? plan.days.flatMap((d) => d.tasks) : [];
@@ -119,7 +142,8 @@ export function PrepPlanner() {
               <h2 id="plan-heading" className="text-2xl font-bold text-white">
                 Your {plan.label} plan
               </h2>
-              <p className="text-sm text-zinc-400 mt-1">{plan.dailyLoad}</p>
+              <p className="text-sm text-zinc-300 mt-1 max-w-2xl">{plan.promise}</p>
+              <p className="text-xs text-zinc-500 mt-1">{plan.dailyLoad}</p>
             </div>
             <div className="min-w-[220px]" aria-live="polite">
               <div className="flex justify-between text-xs text-zinc-400 mb-1">
@@ -181,6 +205,14 @@ export function PrepPlanner() {
                                 {t.title}
                               </Link>
                             )}
+                            <p className="mt-0.5 text-xs text-zinc-500">
+                              <span className="text-zinc-600">You&apos;ll be able to: </span>
+                              {t.why}
+                            </p>
+                            {(() => {
+                              const st = linkedStatus(t, learning);
+                              return st ? <span className={cn("mt-1 inline-block rounded border px-1.5 py-0.5 text-[10px]", st.cls)}>{st.label}</span> : null;
+                            })()}
                             {t.deepHref && (
                               <Link href={t.deepHref} className="mt-0.5 inline-flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200">
                                 Understand this in depth: {t.deepLabel} <ArrowRight size={11} />
@@ -197,9 +229,21 @@ export function PrepPlanner() {
           </ol>
 
           {essentialTasks.length > 0 && essentialDone === essentialTasks.length && (
-            <p className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 text-sm text-emerald-200" role="status">
-              <Sparkles size={16} /> Every essential task in your {plan.label} plan is done. Do one more timed mock, then rest before the interview.
-            </p>
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 sm:p-5" role="status">
+              <p className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
+                <Sparkles size={16} /> Every essential task in your {plan.label} plan is ticked.
+              </p>
+              <p className="mt-2 text-sm text-zinc-300">
+                You worked through {essentialTasks.filter((t) => t.kind === "learn").length} building-block briefs and{" "}
+                {essentialTasks.filter((t) => t.kind === "design").length} design exercise{essentialTasks.filter((t) => t.kind === "design").length === 1 ? "" : "s"}
+                {essentialTasks.some((t) => t.kind === "simulate") ? ", plus a timed mock" : ""}. That&apos;s preparation, not a guarantee — so here&apos;s what to do next:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-zinc-200 list-disc pl-5">
+                {plan.afterwards.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
       )}

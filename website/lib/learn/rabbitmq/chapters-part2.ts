@@ -25,41 +25,85 @@ RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
 `;
 
-const PRODUCER = `# producer.py — publish a report-generation task
-import json
+const TOPOLOGY = `# topology.py — declare exchanges, queues and bindings (safe to run repeatedly)
+EXCHANGE = "reports"                 # topic exchange that producers publish to
+DLX = "reports.dlx"                  # dead-letter exchange
+QUEUE = "reports.pdf-jobs"           # work queue for PDF reports
+DLQ = "reports.pdf-jobs.dlq"         # parking lot for jobs that can't be processed
+BINDING_KEY = "report.pdf.*"         # matches report.pdf.monthly, report.pdf.weekly, ...
+
+
+def declare(channel):
+    channel.exchange_declare(exchange=EXCHANGE, exchange_type="topic", durable=True)
+    channel.exchange_declare(exchange=DLX, exchange_type="fanout", durable=True)
+
+    channel.queue_declare(queue=DLQ, durable=True)
+    channel.queue_bind(queue=DLQ, exchange=DLX)
+
+    channel.queue_declare(
+        queue=QUEUE,
+        durable=True,
+        arguments={
+            "x-queue-type": "quorum",          # replicated, durable work queue
+            "x-dead-letter-exchange": DLX,     # rejected messages go here
+            "x-delivery-limit": 5,             # safety net against poison messages
+        },
+    )
+    channel.queue_bind(queue=QUEUE, exchange=EXCHANGE, routing_key=BINDING_KEY)
+`;
+
+const CONNECTION = `# connection.py — one place for connection settings (read from the environment)
 import os
+
+import pika
+
+
+def connect():
+    credentials = pika.PlainCredentials(
+        os.environ["RABBITMQ_USER"], os.environ["RABBITMQ_PASSWORD"]
+    )
+    params = pika.ConnectionParameters(
+        host=os.environ.get("RABBITMQ_HOST", "localhost"),
+        port=int(os.environ.get("RABBITMQ_PORT", "5672")),
+        credentials=credentials,
+        heartbeat=30,
+    )
+    return pika.BlockingConnection(params)
+`;
+
+const PRODUCER = `# producer.py — publish a report job to the topic exchange
+#   python producer.py report.pdf.monthly          → routed to the work queue
+#   python producer.py invoice.pdf.monthly         → no binding matches (unroutable)
+#   python producer.py report.pdf.weekly --poison  → consumer rejects it → DLQ
+import json
+import sys
 import uuid
 
 import pika
 
-QUEUE = "report-jobs"
+import topology
+from connection import connect
 
-credentials = pika.PlainCredentials(
-    os.environ["RABBITMQ_USER"], os.environ["RABBITMQ_PASSWORD"]
-)
-params = pika.ConnectionParameters(
-    host=os.environ.get("RABBITMQ_HOST", "localhost"),
-    port=int(os.environ.get("RABBITMQ_PORT", "5672")),
-    credentials=credentials,
-)
+routing_key = sys.argv[1] if len(sys.argv) > 1 else "report.pdf.monthly"
+poison = "--poison" in sys.argv
 
-connection = pika.BlockingConnection(params)
+connection = connect()
 channel = connection.channel()
+topology.declare(channel)
 
-# Durable queue: the definition survives a broker restart.
-channel.queue_declare(queue=QUEUE, durable=True)
-
-# Publisher confirms: basic_publish now raises if the broker
-# nacks the message or (with mandatory=True) cannot route it.
+# Publisher confirms: basic_publish now raises if the broker nacks the
+# message or (because mandatory=True) no queue is bound for the routing key.
 channel.confirm_delivery()
 
-job = {"report_id": 101, "type": "monthly-sales", "format": "pdf"}
+job = {"report_id": 101, "period": routing_key.split(".")[-1]}
+if poison:
+    job["poison"] = True  # the consumer treats this as a permanent failure
 message_id = str(uuid.uuid4())
 
 try:
     channel.basic_publish(
-        exchange="",              # default exchange: routes by queue name
-        routing_key=QUEUE,
+        exchange=topology.EXCHANGE,
+        routing_key=routing_key,
         body=json.dumps(job),
         properties=pika.BasicProperties(
             content_type="application/json",
@@ -68,64 +112,63 @@ try:
         ),
         mandatory=True,
     )
-    print(f" [x] Confirmed report job {job['report_id']} ({message_id})")
+    print(f" [x] Confirmed {routing_key} ({message_id})")
 except pika.exceptions.UnroutableError:
-    print(" [!] Message was returned: no queue matched")
+    print(f" [!] Unroutable: no queue is bound for '{routing_key}'")
 except pika.exceptions.NackError:
     print(" [!] Broker nacked the message — retry with backoff")
 finally:
     connection.close()
 `;
 
-const CONSUMER = `# consumer.py — process report jobs with manual acks
+const CONSUMER = `# consumer.py — process report jobs: ack on success, dead-letter permanent failures
 import json
-import os
 import time
 
-import pika
+import topology
+from connection import connect
 
-QUEUE = "report-jobs"
 processed_ids = set()  # demo only — use a DB table with a unique constraint
 
-credentials = pika.PlainCredentials(
-    os.environ["RABBITMQ_USER"], os.environ["RABBITMQ_PASSWORD"]
-)
-params = pika.ConnectionParameters(
-    host=os.environ.get("RABBITMQ_HOST", "localhost"),
-    port=int(os.environ.get("RABBITMQ_PORT", "5672")),
-    credentials=credentials,
-    heartbeat=30,
-)
 
-connection = pika.BlockingConnection(params)
-channel = connection.channel()
-channel.queue_declare(queue=QUEUE, durable=True)  # must match the producer
+class PermanentError(Exception):
+    """A failure that retrying can never fix (bad input, missing data)."""
 
-# Fair dispatch: at most one unacked message per consumer.
-channel.basic_qos(prefetch_count=1)
+
+def build_report(job):
+    if job.get("poison"):
+        raise PermanentError("invalid report definition")
+    time.sleep(2)  # pretend to build a PDF
 
 
 def handle(ch, method, properties, body):
-    job = json.loads(body)
     if properties.message_id in processed_ids:
         print(f" [=] Duplicate {properties.message_id}, skipping")
         ch.basic_ack(delivery_tag=method.delivery_tag)
         return
 
+    job = json.loads(body)
+    print(f" [>] {method.routing_key}: report {job['report_id']}"
+          f" (redelivered={method.redelivered})")
     try:
-        print(f" [>] Generating report {job['report_id']}"
-              f" (redelivered={method.redelivered})")
-        time.sleep(2)  # pretend to build a PDF
-        processed_ids.add(properties.message_id)
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        print(f" [✓] Done {job['report_id']}")
-    except Exception as exc:  # noqa: BLE001 — demo
-        print(f" [!] Failed: {exc}")
-        # requeue=False → dead-lettered if the queue has a DLX, else dropped
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        build_report(job)
+    except PermanentError as exc:
+        print(f" [x] Permanent failure ({exc}) -> dead-letter queue")
+        # requeue=False → the queue's dead-letter exchange receives it
+        ch.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
+        return
+
+    processed_ids.add(properties.message_id)
+    ch.basic_ack(delivery_tag=method.delivery_tag)  # only after the work is done
+    print(f" [✓] Done report {job['report_id']}")
 
 
-channel.basic_consume(queue=QUEUE, on_message_callback=handle, auto_ack=False)
+connection = connect()
+channel = connection.channel()
+topology.declare(channel)
+channel.basic_qos(prefetch_count=1)  # fair dispatch: one unacked job at a time
+channel.basic_consume(queue=topology.QUEUE, on_message_callback=handle, auto_ack=False)
+
 print(" [*] Waiting for report jobs. CTRL+C to exit")
 try:
     channel.start_consuming()
@@ -148,23 +191,42 @@ set -a && source .env && set +a
 # 4. Terminal 1 — start the worker
 python consumer.py
 
-# 5. Terminal 2 — publish a job (run it a few times)
-python producer.py
+# 5. Terminal 2 — try the three scenarios
+python producer.py report.pdf.monthly          # matches report.pdf.* → processed
+python producer.py invoice.pdf.monthly         # no binding matches → unroutable
+python producer.py report.pdf.weekly --poison  # rejected → dead-letter queue
+
+# 6. Inspect the queues (the DLQ now holds the poison job)
+docker exec rabbitmq rabbitmqctl list_queues name messages
+
+# 7. Crash test: publish again and press CTRL+C in terminal 1 within 2 s,
+#    then restart the consumer and watch the job come back.
 
 # Optional: management UI at http://localhost:15672
 `;
 
 const OUTPUT = `# Terminal 2 (producer)
- [x] Confirmed report job 101 (5f0c7c6e-3a51-4c2e-9a8e-...)
+ [x] Confirmed report.pdf.monthly (5089215f-f68a-4f9d-ac95-200c99b31ac8)
+ [!] Unroutable: no queue is bound for 'invoice.pdf.monthly'
+ [x] Confirmed report.pdf.weekly (2a57ef68-cd89-4647-b9a7-317b9c1b2dad)
 
 # Terminal 1 (consumer)
  [*] Waiting for report jobs. CTRL+C to exit
- [>] Generating report 101 (redelivered=False)
- [✓] Done 101
+ [>] report.pdf.monthly: report 101 (redelivered=False)
+ [✓] Done report 101
+ [>] report.pdf.weekly: report 101 (redelivered=False)
+ [x] Permanent failure (invalid report definition) -> dead-letter queue
 
-# Kill the consumer with CTRL+C *during* the 2-second sleep, restart it:
- [>] Generating report 101 (redelivered=True)
- [✓] Done 101
+# rabbitmqctl list_queues name messages
+reports.pdf-jobs.dlq    1
+reports.pdf-jobs        0
+
+# Crash test: consumer killed 1 s into a job, then restarted
+ [>] report.pdf.monthly: report 101 (redelivered=False)
+ ...killed...
+ [*] Waiting for report jobs. CTRL+C to exit
+ [>] report.pdf.monthly: report 101 (redelivered=True)
+ [✓] Done report 101
 `;
 
 export const CHAPTERS_PART_2: Chapter[] = [
@@ -448,37 +510,51 @@ export const CHAPTERS_PART_2: Chapter[] = [
     navTitle: "Hands-on with Python",
     minutes: 12,
     problem:
-      "Concepts click once you see redelivery happen on your own machine. This chapter runs RabbitMQ locally and builds the report-generation flow from earlier chapters with `pika`, the most widely used Python client.",
+      "Concepts click once you see them happen on your own machine. This chapter runs RabbitMQ locally and builds the report-generation flow from earlier chapters with `pika`, the most widely used Python client — including routing keys, an unroutable message, a dead-letter queue and a consumer crash.",
     simple:
-      "Start RabbitMQ in Docker, run a worker that waits for jobs, run a producer that publishes one, then kill the worker mid-job and watch the job come back.",
+      "Start RabbitMQ in Docker, declare an exchange and queues, run a worker, publish jobs with different routing keys, send one that can never succeed, then kill the worker mid-job and watch the job come back.",
     analogy:
       "Same post office as before — now you're the clerk and the courier, and you can pull the plug on the courier to see what happens.",
     walkthrough: [
       "`docker compose up -d` starts RabbitMQ with the management plugin, bound to localhost.",
-      "The producer declares a durable queue, enables confirms and publishes a persistent JSON message through the default exchange.",
-      "The consumer declares the same queue, sets `prefetch_count=1` and acks only after finishing.",
-      "Kill the consumer during processing — on restart you'll see `redelivered=True`.",
+      "`topology.py` declares a topic exchange `reports`, a quorum work queue bound with `report.pdf.*`, and a dead-letter exchange + queue. Both scripts call it, because declarations are idempotent.",
+      "The producer enables publisher confirms and publishes a persistent JSON job with a routing key and `mandatory=True`.",
+      "`report.pdf.monthly` matches the binding and is processed; `invoice.pdf.monthly` matches nothing and is returned as unroutable.",
+      "A poison job raises a permanent error; the consumer rejects it with `requeue=False`, and the queue's dead-letter exchange routes it to the DLQ.",
+      "Kill the consumer mid-job — the unacked message comes back with `redelivered=True` when a consumer reconnects.",
     ],
     technical: [
       "**Ports:** 5672 is AMQP (what apps connect to). 15672 is the optional management UI/HTTP API. The compose file binds both to `127.0.0.1` — in production never publish the management port to the internet; use a VPN/bastion and TLS (AMQPS on 5671).",
       "**Credentials** come from environment variables, not code. RabbitMQ's built-in `guest` user can only connect from localhost by design; create a dedicated user per application.",
-      "These snippets target **pika 1.3.x** (`pika.DeliveryMode.Persistent` requires ≥ 1.3) and RabbitMQ 3.13/4.x. They were written for this lesson and checked against the pika API, but not executed as part of building this page — run them yourself.",
+      "**Tested:** these scripts were run against the `rabbitmq:4-management` image with **pika 1.3.2**; the expected output below is from that run (message IDs will differ). The compose file mirrors the tested container settings but was not itself run. `pika.DeliveryMode.Persistent` requires pika ≥ 1.3.",
+      "**Topology as code:** declaring exchanges, queues and bindings from both producer and consumer means either can start first. Arguments must match everywhere — changing `x-queue-type` or the DLX on an existing queue fails with `PRECONDITION_FAILED`, so you'd delete or migrate the queue instead.",
+      "**Failure handling:** permanent errors are rejected with `requeue=False` (→ DLQ immediately). Unexpected exceptions crash the worker; the unacked message is redelivered, and the quorum queue's `x-delivery-limit` of 5 dead-letters it if it keeps failing — a safety net against poison messages.",
       "`BlockingConnection` is the simplest adapter for scripts. For long-running services consider `SelectConnection` or an asyncio client (e.g. `aio-pika`) and add reconnect logic.",
       "**Common errors:** `AMQPConnectionError` — broker not running, wrong host/port, or still starting (wait a few seconds after `docker compose up`). `ProbableAuthenticationError`/`ACCESS_REFUSED` — wrong credentials, or using `guest` from another host. `ChannelClosedByBroker: (406, 'PRECONDITION_FAILED …')` — the queue already exists with different arguments (e.g. durable vs non-durable); delete it or declare it identically. `StreamLostError` — missed heartbeats (often a blocked callback in BlockingConnection).",
-      "**Mapping to the animations:** `basic_publish(exchange=\"\", routing_key=QUEUE)` is the default-exchange path from Chapter 2; `confirm_delivery()` is the publisher-confirm scene from Chapter 6; `basic_qos(prefetch_count=1)` is fair dispatch from Chapter 4; `basic_ack` after work and the `redelivered` flag are the crash scene from Chapter 5.",
+      "**Mapping to the animations:** the topic exchange and `report.pdf.*` binding are Chapter 3's routing; the unroutable invoice is Chapter 3's \"no binding matches\" step; `confirm_delivery()` is Chapter 6's publisher-confirm scene; `basic_qos(prefetch_count=1)` is Chapter 4's fair dispatch; ack-after-work and `redelivered=True` are Chapter 5's crash scene; the reject → DLX → DLQ path is Chapter 7.",
     ],
     code: [
       { filename: "docker-compose.yml", language: "yaml", code: COMPOSE, notes: ["`rabbitmq:4-management` includes the management UI.", "Ports are bound to 127.0.0.1 so nothing is exposed beyond your machine.", "A named volume keeps durable queues across container restarts."] },
       { filename: ".env", language: "dotenv", code: ENV, notes: ["Read by Docker Compose and loaded into your shell for the Python scripts.", "Don't commit real secrets — add `.env` to `.gitignore`."] },
       {
+        filename: "topology.py",
+        language: "python",
+        code: TOPOLOGY,
+        notes: [
+          "A **topic exchange** decouples producers from queues: producers only know `reports` and a routing key.",
+          "The work queue is a **quorum queue** (replicated and always durable) with a dead-letter exchange and a delivery limit.",
+          "The DLX is a fanout exchange bound to the DLQ, so every dead-lettered message lands there regardless of routing key.",
+        ],
+      },
+      { filename: "connection.py", language: "python", code: CONNECTION, notes: ["Credentials come from environment variables, never from code.", "A 30 s heartbeat lets both sides notice a dead connection."] },
+      {
         filename: "producer.py",
         language: "python",
         code: PRODUCER,
         notes: [
-          "`queue_declare(durable=True)` is idempotent — safe to call from both producer and consumer as long as arguments match.",
           "`confirm_delivery()` puts the channel in confirm mode; `basic_publish` then blocks until the broker acks or nacks.",
-          "`mandatory=True` turns \"no queue matched\" into an `UnroutableError` instead of a silent drop.",
-          "`delivery_mode=Persistent` + durable queue = survives broker restart.",
+          "`mandatory=True` turns \"no queue matched\" into an `UnroutableError` instead of a silent drop — try `invoice.pdf.monthly`.",
+          "`delivery_mode=Persistent` asks the broker to write the message to disk; quorum queues persist every message anyway.",
           "`message_id` gives the consumer a stable key for idempotency.",
         ],
       },
@@ -487,14 +563,14 @@ export const CHAPTERS_PART_2: Chapter[] = [
         language: "python",
         code: CONSUMER,
         notes: [
-          "`basic_qos(prefetch_count=1)` → at most one unacked message for this consumer.",
-          "`auto_ack=False` + `basic_ack` after the work = at-least-once.",
-          "The in-memory `processed_ids` set only demonstrates the idea; it is lost on restart — use a DB unique constraint in real code.",
-          "`basic_nack(requeue=False)` dead-letters (if a DLX is configured) instead of looping forever.",
+          "`basic_qos(prefetch_count=1)` → at most one unacked message for this consumer (fair dispatch).",
+          "`basic_ack` only after the work succeeds = at-least-once delivery.",
+          "`basic_reject(requeue=False)` sends permanent failures to the dead-letter queue instead of looping forever.",
+          "The in-memory `processed_ids` set only demonstrates idempotency; it's lost on restart — use a database unique constraint in real code.",
         ],
       },
       { filename: "terminal", language: "bash", code: RUN },
-      { filename: "expected output", language: "text", code: OUTPUT },
+      { filename: "expected output (from a real run)", language: "text", code: OUTPUT },
     ],
     mistakes: [
       { myth: "It's fine to open a new connection for every publish.", reality: "Connections are expensive. Reuse one per process (the demo opens one per run for simplicity)." },
@@ -505,8 +581,9 @@ export const CHAPTERS_PART_2: Chapter[] = [
       { q: "What would you change before running this consumer in production?", short: "DB-backed idempotency, reconnect/backoff logic, a DLX + retry queues, structured logging, metrics, TLS and per-service credentials." },
     ],
     takeaways: [
-      "Declare queues identically in every service.",
-      "Confirms on the producer, manual acks + prefetch on the consumer.",
+      "Declare topology as code, identically in every service.",
+      "Confirms + mandatory on the producer; manual acks + prefetch on the consumer.",
+      "Reject permanent failures to a DLQ; let the delivery limit catch the rest.",
       "Kill the consumer mid-job to see redelivery for yourself.",
     ],
     quiz: [
@@ -516,6 +593,24 @@ export const CHAPTERS_PART_2: Chapter[] = [
         options: ["Wrong password", "The queue already exists with a different durable setting", "The broker is down", "Prefetch is too high"],
         answer: 1,
         explanation: "Re-declaring an existing queue with different arguments fails with 406 PRECONDITION_FAILED.",
+      },
+      {
+        id: "q11-2",
+        question: "The consumer calls `basic_reject(requeue=False)` on the poison job. Where does the message end up?",
+        options: [
+          "It's deleted — rejected messages are always discarded",
+          "In `reports.pdf-jobs.dlq`, because the work queue's dead-letter exchange `reports.dlx` routes it there",
+          "Back at the head of `reports.pdf-jobs` for another attempt",
+          "Returned to the producer as unroutable",
+        ],
+        answer: 1,
+        explanation: "With requeue=False, a queue that has `x-dead-letter-exchange` set publishes the message to that exchange; the fanout DLX delivers it to the bound DLQ. Without a DLX it would be discarded.",
+        optionWhy: [
+          "Only true when the queue has no dead-letter exchange configured.",
+          "",
+          "That's what requeue=True does — which would loop forever on a poison message.",
+          "\"Unroutable\" refers to publishing with no matching binding; this message was routed and delivered fine.",
+        ],
       },
     ],
   },

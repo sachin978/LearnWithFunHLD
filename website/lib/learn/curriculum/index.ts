@@ -1,9 +1,10 @@
 import { BRIEFS_CORE } from "./briefs-core";
 import { BRIEFS_SCALE } from "./briefs-scale";
+import { BRIEFS_ADVANCED } from "./briefs-advanced";
 import { DESIGNS } from "./designs";
 import type { ConceptBrief, DesignWalkthrough } from "./types";
 
-export const BRIEFS: ConceptBrief[] = [...BRIEFS_CORE, ...BRIEFS_SCALE];
+export const BRIEFS: ConceptBrief[] = [...BRIEFS_CORE, ...BRIEFS_SCALE, ...BRIEFS_ADVANCED];
 export { DESIGNS };
 
 /** "Design a URL shortener" → "URL shortener" — for lists, chips and breadcrumbs. */
@@ -32,14 +33,19 @@ export function designsUsing(slug: string): DesignWalkthrough[] {
 export const CONCEPT_ORDER = [
   "http-request-flow",
   "api-data-modeling",
+  "monolith-microservices",
   "databases",
   "caching",
   "load-balancing",
+  "api-gateway",
   "replication-sharding",
   "message-queues",
   "reliability-patterns",
   "cap-consistency",
+  "distributed-locks",
   "cdn-object-storage",
+  "observability",
+  "security-fundamentals",
   "interview-framework",
   "estimation",
 ];

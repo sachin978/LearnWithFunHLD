@@ -6,6 +6,10 @@ import type { InterviewQuestion, Rich } from "@/lib/learn/types";
  *  - Learn In Depth (lib/learn/curriculum/roadmap.ts) — 12 ordered stages
  * Both link to the same canonical pages: concept briefs, design walkthroughs
  * and full interactive courses (e.g. /learn/rabbitmq).
+ *
+ * Every brief is organised around the learning loop
+ *   Understand → Visualize → Practise → Apply → Explain → Recall
+ * so students move beyond passive reading.
  */
 
 export interface RecallOption {
@@ -26,6 +30,24 @@ export interface DeeperLink {
   kind: "course" | "brief" | "design" | "simulator";
 }
 
+/** A worked example with explicit assumptions and numbers. */
+export interface WorkedExample {
+  title: string;
+  setup: Rich;
+  steps: Rich[];
+  takeaway: Rich;
+}
+
+/** Interactive labs that let students change inputs and observe consequences. */
+export type LabId = "cache" | "estimation" | "rate-limiter";
+
+/** A weak interview answer, why it falls short, and a stronger version. */
+export interface AnswerContrast {
+  weak: Rich;
+  why: Rich;
+  strong: Rich;
+}
+
 /** A concise, interview-oriented lesson. One canonical page per concept. */
 export interface ConceptBrief {
   slug: string;
@@ -35,20 +57,36 @@ export interface ConceptBrief {
   stage: number;
   minutes: number;
   summary: Rich;
+  /** "After this you can…" — shown on plans and the roadmap. */
+  outcome: string;
+  // Understand
   problem: Rich;
   simple: Rich;
   analogy?: Rich;
+  // Visualize
   howItWorks: Rich[];
   /** Key into the brief scene registry (components/learn/curriculum/BriefScene). */
   sceneId?: "request-flow" | "cache-aside" | "load-balancer" | "async-messaging";
+  // Practise
+  example: WorkedExample;
+  lab?: LabId;
+  // Apply
   whenToUse: Rich[];
   whenNotToUse: Rich[];
   tradeoffs: { pros: Rich[]; cons: Rich[]; decide: Rich };
+  /** What happens under higher load or partial failure. */
+  failureModes: Rich[];
+  // Explain
+  /** The learner writes their own explanation, then compares. */
+  explain: { prompt: Rich; keyPoints: Rich[] };
+  /** A model ~45-second spoken answer. */
+  interviewAnswer: Rich;
+  mistakes: AnswerContrast[];
   questions: InterviewQuestion[];
-  /** A weak interview answer next to a stronger one. */
-  mistakes: { weak: Rich; strong: Rich }[];
+  // Recall
   recap: Rich[];
   recall: RecallPrompt;
+  // Connections
   prerequisites: string[];
   deeper: DeeperLink[];
 }
@@ -70,6 +108,13 @@ export interface DesignStep {
   /** "Your turn" prompt shown before the answer is revealed. */
   prompt: Rich;
   answer: Rich[];
+  /** Coaching shown after the reveal. */
+  coach: {
+    /** What makes the model answer strong. */
+    strong: Rich;
+    /** How an interviewer might push back — and how to respond. */
+    challenge?: Rich;
+  };
 }
 
 export interface DesignWalkthrough {
@@ -78,10 +123,14 @@ export interface DesignWalkthrough {
   level: "Beginner" | "Intermediate" | "Advanced";
   minutes: number;
   summary: Rich;
+  /** "After this you can…" — shown on plans and the roadmap. */
+  outcome: string;
   /** Exact problem name in the simulator's Problems tab, when one exists. */
   simulatorProblem?: string;
   /** Concept brief slugs this design relies on. */
   concepts: string[];
   steps: DesignStep[];
   followUps: InterviewQuestion[];
+  /** The 60-second recap you'd give at the end of the interview. */
+  wrapUp: Rich[];
 }

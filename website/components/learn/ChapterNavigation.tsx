@@ -5,6 +5,7 @@ import { motion, useScroll, useSpring } from "framer-motion";
 import { ChevronDown, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveLearnProgress } from "@/lib/learn/progress";
+import { recordCourseChapter } from "@/lib/learn/learning-state";
 
 export interface NavChapter {
   id: string;
@@ -106,6 +107,7 @@ export function ChapterNavigation({
       const c = chapters.find((ch) => ch.id === id);
       if (!course || variant !== "desktop" || !c) return;
       saveLearnProgress({ course: course.slug, courseTitle: course.title, chapterId: c.id, chapterNumber: c.number, chapterTitle: c.navTitle, totalChapters: chapters.length });
+      recordCourseChapter(course.slug, c.id);
     },
     [chapters, course, variant],
   );
