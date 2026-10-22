@@ -254,7 +254,7 @@ export const CHAPTERS_PART_2: Chapter[] = [
       "A **dead-letter exchange (DLX)** is set on a queue (`x-dead-letter-exchange`, optionally `x-dead-letter-routing-key`) or via policy. Messages are dead-lettered when they are **rejected/nacked with requeue=false**, when their **TTL expires**, or when the queue **exceeds its length limit** (with `overflow=reject-publish-dlx` or the default drop-head). Quorum queues also dead-letter when the **delivery limit** is exceeded.",
       "Dead-lettered messages get an **`x-death`** header recording queue, reason (`rejected`, `expired`, `maxlen`, `delivery_limit`) and count — useful for debugging and for counting retries in TTL-based loops.",
       "RabbitMQ does **not** give every queue type a configurable \"retry N times\" setting. **Classic queues** have no delivery limit — `nack(requeue=true)` can loop forever. **Quorum queues** track `x-delivery-count` and support a **delivery limit** (default 20 since RabbitMQ 4.0; unlimited in 3.x unless set), after which the message is dead-lettered or dropped.",
-      "**Delayed retry patterns:** (1) retry queues with a message/queue TTL whose DLX points back to the work exchange — optionally one queue per delay tier (5s, 30s, 5m); (2) the community *delayed message exchange* plugin; (3) application-level retry counters in headers. Pick one and make attempts visible in logs.",
+      "**Delayed retry patterns:** (1) retry queues with a message/queue TTL whose DLX points back to the work exchange — optionally one queue per delay tier (5s, 30s, 5m); (2) the community **delayed message exchange** plugin; (3) application-level retry counters in headers. Pick one and make attempts visible in logs.",
       "Avoid **per-message TTL on a shared retry queue** with mixed delays: classic queues only expire messages from the head, so a 5-minute message can block a 5-second one behind it. Use one queue per delay tier.",
       "**Poison message:** one that fails every time. Immediate requeue makes it bounce back to the head, repeatedly — burning resources and, with low prefetch, starving other messages. The cure is a delivery limit plus a DLQ.",
       "**Recommendation:** classify errors. Transient (timeouts, 5xx, lock contention) → delayed retry with backoff and a cap. Permanent (validation, 4xx, deserialization) → dead-letter immediately. Alert on DLQ depth and build a replay tool.",
@@ -321,7 +321,7 @@ export const CHAPTERS_PART_2: Chapter[] = [
       "**Ordering:** a single queue is FIFO, but with **multiple consumers or redeliveries, processing order is not guaranteed** — message 2 can finish before message 1, and a requeued message comes back later. If per-entity order matters, use a single active consumer (`x-single-active-consumer`) or shard by key across queues (e.g. the consistent-hash exchange plugin) so each entity maps to one consumer.",
       "**Hot queues:** a single queue lives on one node (its leader for quorum queues). One huge queue can't use the whole cluster — split by tenant/type to spread load.",
       "**Backpressure:** set queue length limits (`x-max-length`, with `overflow=reject-publish` so publishers get nacks), and rely on memory/disk alarms as a last line of defence — when they trigger, RabbitMQ blocks publishing connections.",
-      "**Monitor:** messages ready, messages unacked, publish vs deliver/ack rates, consumer count and utilisation, redelivery rate, DLQ depth, and memory/disk alarms. Alert on *sustained* growth, not single spikes.",
+      "**Monitor:** messages ready, messages unacked, publish vs deliver/ack rates, consumer count and utilisation, redelivery rate, DLQ depth, and memory/disk alarms. Alert on **sustained** growth, not single spikes.",
     ],
     mistakes: [
       { myth: "More consumers always means more throughput.", reality: "Throughput caps at the slowest shared dependency. Past that, more consumers add contention." },
@@ -382,7 +382,7 @@ export const CHAPTERS_PART_2: Chapter[] = [
       "A second failure leaves no majority: the queue becomes unavailable.",
     ],
     technical: [
-      "**Classic queues** store data on a single node. Their replication options depend on version: classic *mirrored* queues were deprecated in 3.9 and **removed in RabbitMQ 4.0**. Don't assume a classic queue is replicated.",
+      "**Classic queues** store data on a single node. Their replication options depend on version: classic **mirrored** queues were deprecated in 3.9 and **removed in RabbitMQ 4.0**. Don't assume a classic queue is replicated.",
       "**Quorum queues** use the Raft consensus algorithm. Writes go through a leader and are committed once a majority of replicas have persisted them. A cluster of *N* replicas tolerates ⌊(N−1)/2⌋ failures: 3 tolerates 1, 5 tolerates 2.",
       "When a majority is unavailable, a quorum queue **stops serving** publishes and deliveries — favouring consistency over availability (CP in CAP terms).",
       "Quorum queues are always durable, persist every message, support delivery limits and poison-message handling, but don't support some classic features (e.g. non-durable/exclusive queues, global QoS) and use more disk and network.",

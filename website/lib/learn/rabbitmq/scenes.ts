@@ -1060,30 +1060,3 @@ export const queueVsLogScene: SceneDefinition = {
 };
 
 // ─── Home page · compact Learn preview ───────────────────────────────────────
-
-/**
- * A condensed version of the Chapter 2 anatomy scene, sized for a card. Same
- * engine, same vocabulary — so the home page previews the real lesson rather
- * than a look-alike illustration.
- */
-export const homePreviewScene: SceneDefinition = {
-  id: "home-preview",
-  title: "Producer → exchange → queue → consumer",
-  description: "A message is published to an exchange, routed into a queue, delivered to a consumer and acknowledged.",
-  width: 480,
-  height: 128,
-  actors: [
-    { id: "producer", kind: "producer", label: "Producer", x: 55, y: 70, w: 96, h: 52 },
-    { id: "exchange", kind: "exchange", label: "Exchange", x: 178, y: 70, w: 100, h: 52 },
-    { id: "queue", kind: "queue", label: "Queue", x: 305, y: 70, w: 104, h: 52 },
-    { id: "consumer", kind: "consumer", label: "Consumer", x: 427, y: 70, w: 96, h: 52 },
-  ],
-  edges: [edge("producer", "exchange"), edge("exchange", "queue"), edge("queue", "consumer")],
-  steps: [
-    { title: "Publish", caption: "A producer publishes orders.created", tokens: [on("m", "transit", "producer-exchange", 0.55, { label: "M" })], edges: { "producer-exchange": "active" }, durationMs: 1500 },
-    { title: "Route", caption: "The exchange matches it to a binding", tokens: [at("m", "accepted", "exchange", { label: "M" })], actors: { exchange: { status: "active", badge: "orders.* ✓", badgeTone: "emerald" } }, durationMs: 1500 },
-    { title: "Queue", caption: "The message waits safely in a queue", tokens: [at("m", "queued", "queue", { label: "M" })], edges: { "exchange-queue": "active" }, durationMs: 1500 },
-    { title: "Deliver", caption: "A consumer receives and processes it", tokens: [at("m", "processing", "consumer", { label: "M" })], edges: { "queue-consumer": "active" }, actors: { consumer: { status: "busy" } }, durationMs: 1500 },
-    { title: "Ack", caption: "It acknowledges — the queue deletes it", tokens: [at("m", "acked", "consumer", { label: "M" })], actors: { consumer: { status: "ok", badge: "ack ✓", badgeTone: "emerald" } }, durationMs: 2200 },
-  ],
-};

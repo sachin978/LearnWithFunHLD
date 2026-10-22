@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { FINAL_CHECKLIST, PREP_HORIZONS, PREP_PLANS, planMinutes, type PrepHorizon, type TaskKind } from "@/lib/learn/curriculum/prep";
 import { PREP_PROGRESS_KEY, PROGRESS_EVENT, parsePrepProgress, savePrepProgress, type PrepProgress } from "@/lib/learn/progress";
 import { useLearningState, type LearningState } from "@/lib/learn/learning-state";
-import { WORKFLOW } from "@/lib/learn/curriculum/types";
+import { briefCompletion, designCompletion, type Completion } from "@/lib/learn/completion";
 import { trackLearning } from "@/lib/learn/analytics";
 import type { PrepTask } from "@/lib/learn/curriculum/prep";
 
@@ -38,21 +38,21 @@ function snapshot() {
 
 const fmt = (min: number) => (min >= 60 ? `${Math.floor(min / 60)} h ${min % 60 ? `${min % 60} min` : ""}`.trim() : `${min} min`);
 
-/** Status of the lesson a task links to — from recorded actions, never implying mastery. */
-function linkedStatus(t: PrepTask, learning: LearningState): { label: string; cls: string } | null {
+/** Status chips for the lesson a task links to — from recorded actions, never implying mastery. */
+function linkedStatus(t: PrepTask, learning: LearningState): { label: string; cls: string }[] {
   const slug = t.href.split("/").pop()?.split("#")[0] ?? "";
+  const chips: { label: string; cls: string }[] = [];
+  const progressChip = (c: Completion, unit: string) => {
+    if (c.complete) chips.push({ label: "Lesson complete", cls: "text-emerald-300 border-emerald-500/30" });
+    else if (c.done > 0) chips.push({ label: `${c.done}/${c.total} ${unit}`, cls: "text-amber-300 border-amber-500/30" });
+    else if (c.started) chips.push({ label: "Opened", cls: "text-zinc-400 border-border" });
+  };
   if (t.kind === "learn") {
-    const p = learning.briefs[slug];
-    if (p?.recall === "best") return { label: "Self-test: strong", cls: "text-emerald-300 border-emerald-500/30" };
-    if (p?.recall === "valid") return { label: "Self-test: partly right", cls: "text-amber-300 border-amber-500/30" };
-    if (p?.recall === "weak") return { label: "Self-test: missed", cls: "text-rose-300 border-rose-500/30" };
-    if (p?.openedAt) return { label: "Opened", cls: "text-zinc-400 border-border" };
+    progressChip(briefCompletion(learning.briefs[slug]), "steps");
+    if (learning.briefs[slug]?.recall === "weak") chips.push({ label: "Self-test: missed", cls: "text-rose-300 border-rose-500/30" });
   }
-  if (t.kind === "design") {
-    const n = learning.designs[slug]?.revealed.length ?? 0;
-    if (n > 0) return { label: `${n}/${WORKFLOW.length} steps attempted`, cls: n >= WORKFLOW.length ? "text-emerald-300 border-emerald-500/30" : "text-amber-300 border-amber-500/30" };
-  }
-  return null;
+  if (t.kind === "design") progressChip(designCompletion(learning.designs[slug]), "steps attempted");
+  return chips;
 }
 
 function parseHorizon(v: string | null): PrepHorizon | null {
@@ -209,10 +209,11 @@ export function PrepPlanner() {
                               <span className="text-zinc-600">You&apos;ll be able to: </span>
                               {t.why}
                             </p>
-                            {(() => {
-                              const st = linkedStatus(t, learning);
-                              return st ? <span className={cn("mt-1 inline-block rounded border px-1.5 py-0.5 text-[10px]", st.cls)}>{st.label}</span> : null;
-                            })()}
+                            {linkedStatus(t, learning).map((st) => (
+                              <span key={st.label} className={cn("mt-1 mr-1.5 inline-block rounded border px-1.5 py-0.5 text-[10px]", st.cls)}>
+                                {st.label}
+                              </span>
+                            ))}
                             {t.deepHref && (
                               <Link href={t.deepHref} className="mt-0.5 inline-flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200">
                                 Understand this in depth: {t.deepLabel} <ArrowRight size={11} />

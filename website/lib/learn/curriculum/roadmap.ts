@@ -18,6 +18,8 @@ export interface RoadmapLesson {
   level: "essential" | "advanced";
   /** The brief that covers this topic — several related topics share one brief. */
   source?: string;
+  /** An optional deep dive: shown in its stage but not counted towards completion. */
+  optional?: boolean;
 }
 
 export interface RoadmapStage {
@@ -41,7 +43,7 @@ const brief = (title: string, slug: string, level: Level = "essential"): Roadmap
   if (!b) throw new Error(`Unknown brief ${slug}`);
   return { title, kind: "brief", href: briefHref(slug), level, source: b.shortTitle };
 };
-const course = (title: string, href: string, level: Level = "essential"): RoadmapLesson => ({ title, kind: "course", href, level });
+const deepDive = (title: string, href: string): RoadmapLesson => ({ title, kind: "course", href, level: "advanced", optional: true });
 const design = (slug: string): RoadmapLesson => {
   const d = getDesign(slug);
   if (!d) throw new Error(`Unknown design ${slug}`);
@@ -150,13 +152,13 @@ export const ROADMAP: RoadmapStage[] = [
     outcomes: ["Decide when work should be asynchronous", "Explain acks, at-least-once delivery and idempotent consumers", "Design retries and dead-letter handling"],
     lessons: [
       brief("Synchronous vs asynchronous communication", "message-queues"),
-      course("Why message queues exist", "/learn/rabbitmq#why-broker"),
-      course("Producers, consumers, messages and brokers", "/learn/rabbitmq#architecture"),
-      course("Exchanges, queues and bindings", "/learn/rabbitmq#exchanges"),
-      course("Acknowledgements, redelivery and idempotency", "/learn/rabbitmq#acks"),
-      course("Durability and persistence", "/learn/rabbitmq#durability", "advanced"),
-      course("Retries and dead-letter queues", "/learn/rabbitmq#retries-dlx"),
-      course("RabbitMQ vs Kafka", "/learn/rabbitmq#vs-kafka"),
+      brief("Why message queues exist", "message-queues"),
+      brief("Producers, consumers and brokers", "message-queues"),
+      brief("Acknowledgements, redelivery and idempotency", "message-queues"),
+      brief("Durability and persistence", "message-queues", "advanced"),
+      brief("Retries and dead-letter queues", "message-queues"),
+      brief("Queues vs logs (RabbitMQ vs Kafka)", "message-queues"),
+      deepDive("Deep dive: RabbitMQ, visually — 12 animated chapters", "/learn/rabbitmq"),
     ],
   },
   {

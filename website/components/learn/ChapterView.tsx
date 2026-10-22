@@ -19,7 +19,7 @@ function SubHeading({ icon: Icon, children }: { icon: React.ComponentType<{ size
  * walkthrough → technical details → table/code → mistakes → interview →
  * takeaways → knowledge check. Only the lab, code copy and quiz hydrate.
  */
-export function ChapterView({ chapter, total, lab }: { chapter: Chapter; total: number; lab?: React.ReactNode }) {
+export function ChapterView({ chapter, total, lab, quizKey }: { chapter: Chapter; total: number; lab?: React.ReactNode; quizKey?: string }) {
   return (
     <section id={chapter.id} aria-labelledby={`${chapter.id}-title`} className="scroll-mt-32 lg:scroll-mt-20 py-12 border-t border-border first:border-t-0 first:pt-4">
       <header className="mb-8">
@@ -218,7 +218,7 @@ export function ChapterView({ chapter, total, lab }: { chapter: Chapter; total: 
         </ul>
       </div>
 
-      <KnowledgeCheck questions={chapter.quiz} />
+      <KnowledgeCheck questions={chapter.quiz} trackAs={quizKey} />
     </section>
   );
 }

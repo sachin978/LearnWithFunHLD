@@ -20,9 +20,11 @@ export type ReviewRating = "missed" | "shaky" | "good";
 
 export interface BriefProgress {
   openedAt?: number;
+  /** Reading steps (understand, visualize, practise, apply) scrolled through to the end. */
+  seen?: string[];
   recall?: RecallVerdict;
   recallAt?: number;
-  /** When the learner revealed the model answer after writing their own. */
+  /** When the learner compared their own explanation with the model answer. */
   explainedAt?: number;
   /** Key points the learner ticked as covered in their own explanation. */
   keyPointsHit?: number;
@@ -129,6 +131,18 @@ export function markBriefOpened(slug: string) {
 
 export function recordRecall(slug: string, verdict: RecallVerdict) {
   updateLearningState((s) => ({ ...s, briefs: { ...s.briefs, [slug]: { ...s.briefs[slug], recall: verdict, recallAt: Date.now() } } }));
+}
+
+export function recordStepSeen(slug: string, step: string) {
+  updateLearningState((s) => {
+    const current = s.briefs[slug] ?? {};
+    if (current.seen?.includes(step)) return s;
+    return { ...s, briefs: { ...s.briefs, [slug]: { ...current, seen: [...(current.seen ?? []), step] } } };
+  });
+}
+
+export function recordExplainCompared(slug: string) {
+  updateLearningState((s) => (s.briefs[slug]?.explainedAt ? s : { ...s, briefs: { ...s.briefs, [slug]: { ...s.briefs[slug], explainedAt: Date.now() } } }));
 }
 
 export function recordExplain(slug: string, keyPointsHit: number, keyPointsTotal: number) {

@@ -1,10 +1,10 @@
-import { BRIEFS, DESIGNS, briefHref, designHref, designShortTitle, getBrief } from "./curriculum";
+import { DESIGNS, briefHref, designHref, designShortTitle, getBrief } from "./curriculum";
 import { PREP_PLANS } from "./curriculum/prep";
-import { ROADMAP, type RoadmapLesson, type RoadmapStage } from "./curriculum/roadmap";
 import { WORKFLOW } from "./curriculum/types";
 import type { LearnProgress, PrepProgress } from "./progress";
 import type { LearningState } from "./learning-state";
 import { deckStatus } from "./review";
+import { LESSON_STEPS, briefCompletion, briefStepsDone, chapterQuizKey } from "./completion";
 
 /**
  * Personalised next actions, derived only from what the learner has actually
@@ -16,7 +16,7 @@ export interface NextStep {
   id: string;
   /** Lower = more specific to the learner's situation, shown first. */
   priority: number;
-  kind: "prep" | "revisit" | "review" | "design" | "quiz" | "course" | "mock";
+  kind: "prep" | "revisit" | "review" | "lesson" | "design" | "quiz" | "course" | "mock";
   title: string;
   detail: string;
   href: string;
@@ -94,6 +94,32 @@ export function computeNextSteps(
     });
   }
 
+  // A brief started but not finished — the most recently active one.
+  const lastActive = (p: LearningState["briefs"][string]) => Math.max(p.openedAt ?? 0, p.recallAt ?? 0, p.explainedAt ?? 0);
+  const partialBrief = Object.entries(learning.briefs)
+    .filter(([slug, p]) => {
+      const c = briefCompletion(p);
+      return c.done > 0 && !c.complete && !weak.some(([w]) => w === slug);
+    })
+    .sort((a, b) => lastActive(b[1]) - lastActive(a[1]))[0];
+  if (partialBrief) {
+    const [slug, p] = partialBrief;
+    const b = getBrief(slug);
+    const done = briefStepsDone(p);
+    const todo = LESSON_STEPS.find((s) => !done.has(s.id));
+    if (b && todo) {
+      steps.push({
+        id: `finish-${slug}`,
+        priority: 5,
+        kind: "lesson",
+        title: `Finish ${b.shortTitle}`,
+        detail: `${done.size} of ${LESSON_STEPS.length} steps done. Next: ${todo.todo.charAt(0).toLowerCase()}${todo.todo.slice(1)}.`,
+        href: `${briefHref(slug)}#${todo.id === "recall" ? "test-yourself" : todo.id}`,
+        cta: "Continue",
+      });
+    }
+  }
+
   // A design walkthrough left part-way through.
   const partial = Object.entries(learning.designs)
     .filter(([, d]) => d.revealed.length > 0 && d.revealed.length < TOTAL_STEPS)
@@ -114,7 +140,7 @@ export function computeNextSteps(
   }
 
   // Quiz questions answered incorrectly.
-  const rabbitQuiz = learning.quizzes["rabbitmq-final"];
+  const rabbitQuiz = learning.quizzes[chapterQuizKey("rabbitmq", "cheat-sheet")];
   if (rabbitQuiz && rabbitQuiz.missed.length > 0) {
     steps.push({
       id: "quiz-rabbitmq",
@@ -157,52 +183,3 @@ export function computeNextSteps(
   // Specific signals (plan, missed answers, due reviews) before generic nudges.
   return steps.sort((a, b) => a.priority - b.priority);
 }
-
-/** The first available roadmap lesson the learner hasn't opened yet, in stage order. */
-export function nextRoadmapLesson(learning: LearningState): { stage: RoadmapStage; lesson: RoadmapLesson } | null {
-  const openedBriefs = new Set(Object.entries(learning.briefs).filter(([, p]) => p.openedAt).map(([s]) => s));
-  const openedDesigns = new Set(Object.entries(learning.designs).filter(([, d]) => d.openedAt).map(([s]) => s));
-  const seenChapters = new Set(learning.courseChapters["rabbitmq"] ?? []);
-  for (const stage of ROADMAP) {
-    for (const lesson of stage.lessons) {
-      if (!lesson.href || lesson.kind === "planned") continue;
-      const slug = lesson.href.split("/").pop()?.split("#")[0] ?? "";
-      if (lesson.kind === "brief" && !openedBriefs.has(slug)) return { stage, lesson };
-      if (lesson.kind === "design" && !openedDesigns.has(slug)) return { stage, lesson };
-      if (lesson.kind === "course") {
-        const chapter = lesson.href.split("#")[1];
-        if (chapter && !seenChapters.has(chapter)) return { stage, lesson };
-      }
-    }
-  }
-  return null;
-}
-
-/** Human-readable status for one roadmap lesson, from recorded actions only. */
-export function lessonStatus(lesson: RoadmapLesson, learning: LearningState): { label: string; tone: "zinc" | "emerald" | "amber" | "rose" | "indigo" } | null {
-  if (!lesson.href) return null;
-  const path = lesson.href.split("#")[0];
-  const slug = path.split("/").pop() ?? "";
-  if (lesson.kind === "brief") {
-    const p = learning.briefs[slug];
-    if (!p) return null;
-    if (p.recall === "best") return { label: "Self-test: strong", tone: "emerald" };
-    if (p.recall === "valid") return { label: "Self-test: partly right", tone: "amber" };
-    if (p.recall === "weak") return { label: "Self-test: missed", tone: "rose" };
-    return p.openedAt ? { label: "Opened", tone: "zinc" } : null;
-  }
-  if (lesson.kind === "design") {
-    const d = learning.designs[slug];
-    if (!d) return null;
-    if (d.revealed.length >= TOTAL_STEPS) return { label: "All steps attempted", tone: "emerald" };
-    if (d.revealed.length > 0) return { label: `${d.revealed.length}/${TOTAL_STEPS} steps`, tone: "amber" };
-    return d.openedAt ? { label: "Opened", tone: "zinc" } : null;
-  }
-  if (lesson.kind === "course") {
-    const chapter = lesson.href.split("#")[1];
-    if (chapter && (learning.courseChapters["rabbitmq"] ?? []).includes(chapter)) return { label: "Visited", tone: "indigo" };
-  }
-  return null;
-}
-
-export const ALL_BRIEF_SLUGS = BRIEFS.map((b) => b.slug);

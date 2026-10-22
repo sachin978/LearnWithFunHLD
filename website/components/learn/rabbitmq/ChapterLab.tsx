@@ -22,6 +22,7 @@ import {
   topicScene,
 } from "@/lib/learn/rabbitmq/scenes";
 import { FINAL_ASSESSMENT, MENTAL_MODEL, PRODUCTION_CHECKLIST } from "@/lib/learn/rabbitmq/chapters";
+import { chapterQuizKey } from "@/lib/learn/completion";
 import { AnatomyExplorer } from "./AnatomyExplorer";
 import { RoutingPlayground } from "./RoutingPlayground";
 import { BacklogLab, DecisionScenarios, PrefetchLab } from "./Labs";
@@ -152,7 +153,7 @@ export function ChapterLab({ chapterId }: { chapterId: string }) {
               </ul>
             </div>
           </div>
-          <KnowledgeCheck questions={FINAL_ASSESSMENT} title="Final assessment" trackAs="rabbitmq-final" id="final-assessment" />
+          <KnowledgeCheck questions={FINAL_ASSESSMENT} title="Final assessment" trackAs={chapterQuizKey("rabbitmq", "cheat-sheet")} id="final-assessment" />
           <SimulatorLink>
             Ready to apply it? Open the simulator, pick a problem like a notification system, and design it with a <strong className="text-white">Message Queue</strong>.
           </SimulatorLink>

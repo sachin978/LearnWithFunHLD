@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { Eye, Lightbulb, Swords, CheckCircle2 } from "lucide-react";
+import { Eye, Lightbulb, Swords, CheckCircle2, Circle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ProgressRing } from "./LessonProgress";
 import { RichText } from "@/components/learn/RichText";
 import type { DesignStep } from "@/lib/learn/curriculum/types";
 import { WORKFLOW } from "@/lib/learn/curriculum/types";
@@ -127,5 +129,75 @@ export function DesignProgress({ designSlug }: { designSlug: string }) {
         <div className="h-full bg-indigo-400 transition-all" style={{ width: `${(n / total) * 100}%` }} />
       </div>
     </div>
+  );
+}
+
+/** Sticky workflow tracker: ticks for attempted steps and an n/7 ring. */
+export function DesignStepNav({ designSlug, steps }: { designSlug: string; steps: { id: string; label: string }[] }) {
+  const learning = useLearningState();
+  const revealed = new Set(learning.designs[designSlug]?.revealed ?? []);
+  const n = steps.filter((s) => revealed.has(s.id)).length;
+  const complete = n >= steps.length;
+  return (
+    <nav aria-label="Interview workflow" className="sticky top-14 z-30 -mx-4 px-4 border-y border-border bg-background/90 backdrop-blur-md">
+      <div className="flex items-center gap-3">
+        <ol className="flex flex-1 gap-1.5 overflow-x-auto py-2">
+          {steps.map((s, i) => (
+            <li key={s.id} className="shrink-0">
+              <a href={`#step-${s.id}`} className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-zinc-300 hover:border-indigo-500/50 hover:text-white">
+                {revealed.has(s.id) ? (
+                  <CheckCircle2 size={13} className="text-emerald-400" aria-label="attempted" />
+                ) : (
+                  <span className="font-mono text-indigo-300" aria-hidden>
+                    {i + 1}
+                  </span>
+                )}
+                {s.label}
+              </a>
+            </li>
+          ))}
+        </ol>
+        <span className="shrink-0 py-1.5" role="status" aria-label={complete ? "Walkthrough complete" : `${n} of ${steps.length} steps attempted`}>
+          <ProgressRing done={n} total={steps.length} />
+        </span>
+      </div>
+    </nav>
+  );
+}
+
+/** After the last step: what's left, or confirmation that every step was attempted. */
+export function DesignCompletion({ designSlug, steps }: { designSlug: string; steps: { id: string; label: string }[] }) {
+  const learning = useLearningState();
+  const revealed = new Set(learning.designs[designSlug]?.revealed ?? []);
+  const remaining = steps.filter((s) => !revealed.has(s.id));
+  const n = steps.length - remaining.length;
+  const complete = remaining.length === 0;
+  return (
+    <section aria-labelledby="design-done" className={cn("rounded-2xl border p-5 space-y-3", complete ? "border-emerald-500/30 bg-emerald-500/[0.05]" : "border-amber-500/25 bg-amber-500/[0.04]")}>
+      <div className="flex items-start gap-3">
+        <ProgressRing done={n} total={steps.length} size={44} />
+        <div>
+          <h2 id="design-done" className="text-base font-semibold text-white">
+            {complete ? "Walkthrough complete" : "Finish the walkthrough"}
+          </h2>
+          <p className="text-sm text-zinc-400">
+            {complete
+              ? "You attempted every step. Now say the 60-second wrap-up below out loud, then build it in the simulator."
+              : `${n} of ${steps.length} steps attempted. Answer these before revealing the model answer:`}
+          </p>
+        </div>
+      </div>
+      {!complete && (
+        <ul className="flex flex-wrap gap-2">
+          {remaining.map((s) => (
+            <li key={s.id}>
+              <a href={`#step-${s.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background/50 px-2.5 py-1.5 text-xs text-zinc-300 hover:text-white hover:border-zinc-600">
+                <Circle size={12} className="text-amber-400" /> {s.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

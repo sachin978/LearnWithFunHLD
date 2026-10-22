@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AlertTriangle, ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock, Layers, ListChecks, MessageSquare, PenTool, Scale, Target, ThumbsDown, ThumbsUp, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen, CheckCircle2, Clock, Layers, ListChecks, MessageSquare, PenTool, Scale, Target, ThumbsDown, ThumbsUp, XCircle } from "lucide-react";
 import { SiteFooter } from "@/components/ui/site-footer";
 import { LearnTopNav } from "@/components/learn/LearnTopNav";
 import { RichText } from "@/components/learn/RichText";
@@ -10,7 +10,9 @@ import { BriefScene } from "@/components/learn/curriculum/BriefScene";
 import { BriefLab } from "@/components/learn/curriculum/BriefLab";
 import { ExplainCard } from "@/components/learn/curriculum/ExplainCard";
 import { TrackVisit } from "@/components/learn/curriculum/TrackVisit";
-import { BRIEFS, briefHref, designHref, designShortTitle, designsUsing, getBrief, nextBrief } from "@/lib/learn/curriculum";
+import { LessonNextStep, LessonStepNav, StepEnd } from "@/components/learn/curriculum/LessonProgress";
+import { LESSON_STEPS, lessonPosition, type LessonStepId } from "@/lib/learn/completion";
+import { BRIEFS, briefHref, designHref, designShortTitle, designsUsing, getBrief } from "@/lib/learn/curriculum";
 import { ROADMAP } from "@/lib/learn/curriculum/roadmap";
 
 export function generateStaticParams() {
@@ -23,28 +25,20 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return b ? { title: `${b.title} — Interview brief | WireUp System`, description: b.summary.replace(/[`*]/g, "") } : {};
 }
 
-// The learning loop every brief follows (see lib/learn/curriculum/types.ts).
-const PHASES = [
-  { id: "understand", label: "Understand" },
-  { id: "visualize", label: "Visualize" },
-  { id: "practise", label: "Practise" },
-  { id: "apply", label: "Apply" },
-  { id: "explain", label: "Explain" },
-  { id: "recall", label: "Recall" },
-] as const;
-
-function Phase({ n, id, title, children }: { n: number; id: string; title: string; children: React.ReactNode }) {
+// The learning loop every brief follows; completion rules live in lib/learn/completion.ts.
+function Phase({ n, id, title, children }: { n: number; id: LessonStepId; title: string; children: React.ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-32 space-y-5">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3 border-b border-border pb-2">
         <span className="text-xs font-mono text-amber-400">
-          {n} · {PHASES[n - 1].label}
+          {n} · {LESSON_STEPS[n - 1].label}
         </span>
         <h2 id={`${id}-h`} className="text-xl font-semibold text-white">
           {title}
         </h2>
       </div>
       {children}
+      <StepEnd step={id} />
     </section>
   );
 }
@@ -73,7 +67,7 @@ export default async function ConceptBriefPage({ params }: { params: Promise<{ s
   const stage = ROADMAP.find((s) => s.number === b.stage);
   const prereqs = b.prerequisites.map(getBrief).filter((p) => p !== undefined);
   const apply = designsUsing(b.slug);
-  const next = nextBrief(b.slug);
+  const position = lessonPosition(briefHref(b.slug), b.stage);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-28">
@@ -89,6 +83,11 @@ export default async function ConceptBriefPage({ params }: { params: Promise<{ s
             <Link href={`/learn/roadmap#${stage.id}`} className="px-2 py-0.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:border-indigo-500/60">
               Stage {stage.number} · {stage.title}
             </Link>
+          )}
+          {position && position.stage.number === stage?.number && (
+            <span className="text-zinc-400">
+              Lesson {position.index + 1} of {position.count}
+            </span>
           )}
           <span className="flex items-center gap-1 text-zinc-500">
             <Clock size={12} /> ~{b.minutes} min
@@ -127,18 +126,7 @@ export default async function ConceptBriefPage({ params }: { params: Promise<{ s
         </div>
       </header>
 
-      <nav aria-label="Learning steps" className="sticky top-14 z-30 mt-6 border-y border-border bg-background/90 backdrop-blur-md">
-        <ol className="max-w-4xl mx-auto px-4 flex gap-1 overflow-x-auto py-2">
-          {PHASES.map((p, i) => (
-            <li key={p.id} className="shrink-0">
-              <a href={`#${p.id}`} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-                <span className="font-mono text-amber-400/80">{i + 1}</span>
-                {p.label}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </nav>
+      <LessonStepNav slug={b.slug} />
 
       <main className="max-w-4xl mx-auto px-4 pt-10 space-y-14">
         <Phase n={1} id="understand" title="The problem and the intuition">
@@ -362,7 +350,8 @@ export default async function ConceptBriefPage({ params }: { params: Promise<{ s
             </ul>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-[1.5fr_1fr] items-start">
+            <LessonNextStep slug={b.slug} lessonKey={briefHref(b.slug)} stageNumber={position?.stage.number ?? b.stage} />
             <div className="rounded-2xl border border-border bg-card p-5">
               <h3 className="text-sm font-semibold text-white mb-3">Go deeper</h3>
               <ul className="space-y-2">
@@ -378,27 +367,6 @@ export default async function ConceptBriefPage({ params }: { params: Promise<{ s
                   );
                 })}
               </ul>
-            </div>
-            <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.04] p-5 flex flex-col">
-              <h3 className="text-sm font-semibold text-white mb-1">Next step</h3>
-              {next ? (
-                <>
-                  <p className="text-sm text-zinc-400 mb-4">Continue the roadmap with the next building block.</p>
-                  <Link href={briefHref(next.slug)} className="mt-auto inline-flex items-center justify-between gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 py-3 text-sm transition">
-                    {next.title} <ArrowRight size={16} />
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-zinc-400 mb-4">You&apos;ve reached the end of the core briefs. Put them together in a full design.</p>
-                  <Link href="/learn/designs/url-shortener" className="mt-auto inline-flex items-center justify-between gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold px-4 py-3 text-sm transition">
-                    Design a URL shortener <ArrowRight size={16} />
-                  </Link>
-                </>
-              )}
-              <Link href="/learn/interview-prep" className="mt-3 text-xs text-zinc-400 hover:text-white">
-                Short on time? Back to your interview prep plan →
-              </Link>
             </div>
           </div>
         </Phase>

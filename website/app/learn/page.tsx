@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Compass, Layers, PenTool, Repeat, Zap } from "lucide-react";
+import { ArrowRight, Compass, PenTool, Repeat, Zap } from "lucide-react";
 import { SiteFooter } from "@/components/ui/site-footer";
 import { LearnTopNav } from "@/components/learn/LearnTopNav";
-import { BrandMark } from "@/components/learn/BrandMark";
 import { PREP_HORIZONS, PREP_PLANS } from "@/lib/learn/curriculum/prep";
 import { ROADMAP } from "@/lib/learn/curriculum/roadmap";
 import { BRIEFS, DESIGNS } from "@/lib/learn/curriculum";
-import { RABBITMQ_COURSE } from "@/lib/learn/rabbitmq/chapters";
 import { REVIEW_DECK } from "@/lib/learn/review";
 import { NextStepsPanel } from "@/components/learn/curriculum/NextStepsPanel";
+import { TopicLibrary } from "@/components/learn/curriculum/TopicLibrary";
+import { CourseProgressInline } from "@/components/learn/curriculum/RoadmapCourse";
 
 export const metadata: Metadata = {
   title: "Learn system design for interviews — WireUp System",
@@ -93,6 +93,7 @@ export default function LearnPage() {
                   ))}
                   <li className="col-span-2 text-zinc-600">+ 6 more stages, ending in end-to-end designs</li>
                 </ol>
+                <CourseProgressInline />
                 <Link
                   href="/learn/roadmap"
                   className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold px-5 py-3 text-sm transition after:absolute after:inset-0 after:rounded-3xl after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
@@ -133,7 +134,9 @@ export default function LearnPage() {
             </ul>
           </section>
 
-          <section aria-labelledby="inside-heading" className="grid gap-5 lg:grid-cols-[1fr_1.1fr] items-start">
+          <TopicLibrary />
+
+          <section aria-labelledby="inside-heading" className="max-w-3xl">
             <div>
               <h2 id="inside-heading" className="text-xl font-bold text-white mb-2">
                 What&apos;s inside today
@@ -143,7 +146,7 @@ export default function LearnPage() {
                 {[
                   { v: BRIEFS.length, l: "interview briefs" },
                   { v: DESIGNS.length, l: "design walkthroughs" },
-                  { v: RABBITMQ_COURSE.chapters.length, l: "RabbitMQ course chapters" },
+                  { v: ROADMAP.length, l: "roadmap stages" },
                 ].map((f) => (
                   <div key={f.l} className="rounded-xl border border-border bg-card p-3">
                     <dt className="sr-only">{f.l}</dt>
@@ -169,25 +172,6 @@ export default function LearnPage() {
               </Link>
             </div>
 
-            <Link href="/learn/rabbitmq" className="group rounded-2xl border border-amber-500/25 bg-card p-5 hover:border-amber-500/60 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10">
-                  <BrandMark brand="rabbitmq" size={20} />
-                </span>
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider text-amber-400 font-semibold flex items-center gap-1">
-                    <Layers size={11} /> Stage 6 · Interactive course
-                  </p>
-                  <h3 className="text-white font-semibold">{RABBITMQ_COURSE.title}</h3>
-                </div>
-              </div>
-              <p className="text-sm text-zinc-400 mb-3">
-                {RABBITMQ_COURSE.chapters.length} animated chapters on message queues — exchanges, acks, retries, durability and Kafka trade-offs. The deep dive for the messaging stage of the roadmap.
-              </p>
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300">
-                Open the course <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Link>
           </section>
           </div>
         </div>

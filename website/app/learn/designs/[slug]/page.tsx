@@ -7,7 +7,8 @@ import { LearnTopNav } from "@/components/learn/LearnTopNav";
 import { RichText } from "@/components/learn/RichText";
 import { DESIGNS, briefHref, designHref, designShortTitle, getBrief, getDesign, nextDesign } from "@/lib/learn/curriculum";
 import { WORKFLOW } from "@/lib/learn/curriculum/types";
-import { DesignProgress, DesignStepCard } from "@/components/learn/curriculum/DesignStepCard";
+import { DesignCompletion, DesignProgress, DesignStepCard, DesignStepNav } from "@/components/learn/curriculum/DesignStepCard";
+import { lessonPosition } from "@/lib/learn/completion";
 import { TrackVisit } from "@/components/learn/curriculum/TrackVisit";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,8 @@ export default async function DesignWalkthroughPage({ params }: { params: Promis
   const concepts = d.concepts.map(getBrief).filter((b) => b !== undefined);
   const next = nextDesign(d.slug);
   const label = (id: string) => WORKFLOW.find((w) => w.id === id)?.label ?? id;
+  const steps = d.steps.map((s) => ({ id: s.id, label: label(s.id) }));
+  const position = lessonPosition(designHref(d.slug), 12);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-28">
@@ -56,6 +59,11 @@ export default async function DesignWalkthroughPage({ params }: { params: Promis
             <span className="flex items-center gap-1 text-zinc-500">
               <Clock size={12} /> ~{d.minutes} min
             </span>
+            {position && (
+              <span className="text-zinc-400">
+                Stage {position.stage.number} · Design {position.index + 1} of {position.count}
+              </span>
+            )}
           </div>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
@@ -89,23 +97,15 @@ export default async function DesignWalkthroughPage({ params }: { params: Promis
           </p>
         </header>
 
-        <nav aria-label="Interview workflow" className="overflow-x-auto -mx-4 px-4">
-          <ol className="flex gap-2 min-w-max">
-            {d.steps.map((s, i) => (
-              <li key={s.id}>
-                <a href={`#step-${s.id}`} className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-zinc-300 hover:border-indigo-500/50 hover:text-white">
-                  <span className="font-mono text-indigo-300">{i + 1}</span> {label(s.id)}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
+        <DesignStepNav designSlug={d.slug} steps={steps} />
 
         <ol className="space-y-5">
           {d.steps.map((st, i) => (
             <DesignStepCard key={st.id} designSlug={d.slug} step={st} index={i} />
           ))}
         </ol>
+
+        <DesignCompletion designSlug={d.slug} steps={steps} />
 
         <section aria-labelledby="wrap-up" className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-5">
           <h2 id="wrap-up" className="flex items-center gap-2 text-lg font-semibold text-white mb-1">

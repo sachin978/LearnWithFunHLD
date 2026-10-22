@@ -4,7 +4,7 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import { CheckCircle2, MessageSquareText, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RichText } from "@/components/learn/RichText";
-import { readNote, recordExplain, writeNote } from "@/lib/learn/learning-state";
+import { readNote, recordExplain, recordExplainCompared, writeNote } from "@/lib/learn/learning-state";
 import { trackLearning } from "@/lib/learn/analytics";
 
 const noop = () => () => {};
@@ -72,6 +72,7 @@ export function ExplainCard({ slug, prompt, keyPoints, modelAnswer }: { slug: st
               type="button"
               onClick={() => {
                 setRevealed(true);
+                recordExplainCompared(slug);
                 trackLearning("explain_compared", { brief: slug, wroteAnswer: words >= 15 });
               }}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-semibold px-3 py-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"

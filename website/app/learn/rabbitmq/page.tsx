@@ -9,6 +9,7 @@ import { ChapterView } from "@/components/learn/ChapterView";
 import { ChapterNavigation, ReadingProgress } from "@/components/learn/ChapterNavigation";
 import { ChapterLab } from "@/components/learn/rabbitmq/ChapterLab";
 import { RABBITMQ_COURSE } from "@/lib/learn/rabbitmq/chapters";
+import { chapterQuizKey } from "@/lib/learn/completion";
 
 export const metadata: Metadata = {
   title: "RabbitMQ, visually — Learn | WireUp System",
@@ -91,9 +92,9 @@ export default function RabbitMQCoursePage() {
           <ChapterNavigation chapters={navChapters} variant="desktop" course={courseRef} />
         </aside>
         <main id="course" className="min-w-0">
-          <ChapterNavigation chapters={navChapters} variant="mobile" />
+          <ChapterNavigation chapters={navChapters} variant="mobile" course={courseRef} />
           {course.chapters.map((chapter) => (
-            <ChapterView key={chapter.id} chapter={chapter} total={course.chapters.length} lab={<ChapterLab chapterId={chapter.id} />} />
+            <ChapterView key={chapter.id} chapter={chapter} total={course.chapters.length} lab={<ChapterLab chapterId={chapter.id} />} quizKey={chapterQuizKey(course.slug, chapter.id)} />
           ))}
           <div className="py-12 border-t border-border text-center">
             <p className="text-zinc-400 mb-4">You&apos;ve reached the end of the RabbitMQ course.</p>

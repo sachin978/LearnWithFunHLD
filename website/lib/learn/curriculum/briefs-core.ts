@@ -22,7 +22,7 @@ export const BRIEFS_CORE: ConceptBrief[] = [
       "**4. High-level architecture (~10 min):** clients → load balancer → services → data stores, plus caches and queues only where a requirement or number justifies them. Walk one request end to end.",
       "**5. Deep dives (~10 min):** pick the 1–2 hardest parts — often where the interviewer nudges you — and go deep: data partitioning, caching strategy, consistency, hot spots.",
       "**6. Bottlenecks & failures (~5 min):** what breaks first at 10× load? What happens when a node, a dependency or a whole region fails?",
-      "**7. Trade-offs & alternatives (throughout):** say what you chose, what you rejected, and what would make you change your mind. A reusable shape: *the decision → the requirement or number behind it → the cost you accept → how you contain that cost → what would change your mind.*",
+      "**7. Trade-offs & alternatives (throughout):** say what you chose, what you rejected, and what would make you change your mind. A reusable shape: **the decision → the requirement or number behind it → the cost you accept → how you contain that cost → what would change your mind.**",
     ],
     example: {
       title: "The first 10 minutes of \"Design Instagram\"",

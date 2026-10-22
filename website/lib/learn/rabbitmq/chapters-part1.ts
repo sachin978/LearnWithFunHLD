@@ -169,7 +169,7 @@ export const CHAPTERS_PART_1: Chapter[] = [
       "**Topic routing keys** are words separated by dots. In bindings, `*` matches **exactly one** word and `#` matches **zero or more** words. So `orders.#` matches `orders`, `orders.created` and `orders.eu.created`; `orders.*` matches only `orders.created`/`orders.cancelled`; `*.failed` matches `payments.failed` but not `eu.payments.failed`.",
       "A topic binding of just `#` behaves like fanout; a topic binding with no wildcards behaves like direct.",
       "**Headers exchanges** compare binding arguments with message headers. `x-match=all` (default) requires all to match, `x-match=any` requires at least one. Headers starting with `x-` are ignored for matching unless you use `all-with-x`/`any-with-x`. Headers exchanges are flexible but less common and harder to reason about.",
-      "**Unroutable messages** (no binding matched) are silently dropped by default. Set the `mandatory` flag to have them returned to the publisher (`basic.return`), or configure an **alternate exchange** on the exchange to catch them. A dead-letter exchange is a *different* feature — it handles rejected/expired messages that were already in a queue.",
+      "**Unroutable messages** (no binding matched) are silently dropped by default. Set the `mandatory` flag to have them returned to the publisher (`basic.return`), or configure an **alternate exchange** on the exchange to catch them. A dead-letter exchange is a **different** feature — it handles rejected/expired messages that were already in a queue.",
       "The **default exchange** is a direct exchange that routes by queue name. Alternate exchanges are a per-exchange fallback for unroutable messages. They solve different problems.",
     ],
     mistakes: [
@@ -295,7 +295,7 @@ export const CHAPTERS_PART_1: Chapter[] = [
       "**Manual ack**: the consumer calls `basic.ack(delivery_tag)` after processing. Unacked messages are requeued when the channel or connection closes → **at-least-once**.",
       "`basic.nack(requeue=True)` / `basic.reject(requeue=True)` put the message back for redelivery. With `requeue=False` the message is **dead-lettered if the queue has a DLX configured, otherwise discarded**. `nack` can also reject multiple messages at once (`multiple=True`); `reject` handles one.",
       "RabbitMQ detects dead consumers through closed TCP connections and heartbeats. It also enforces a **delivery acknowledgment timeout** (default 30 minutes): a consumer that holds a message unacked for too long has its channel closed and the message requeued.",
-      "RabbitMQ can't know whether a side effect happened before a lost ack. **Exactly-once end-to-end delivery is not something RabbitMQ provides.** You get *effectively-once* processing by making consumers idempotent.",
+      "RabbitMQ can't know whether a side effect happened before a lost ack. **Exactly-once end-to-end delivery is not something RabbitMQ provides.** You get **effectively-once** processing by making consumers idempotent.",
       "**Idempotency patterns:** a unique constraint on `message_id` written in the same DB transaction as the effect; natural idempotency (\"set status = shipped\"); or passing an idempotency key to downstream APIs (e.g. payment providers).",
       "Ack on the **same channel** the message was received on. Acking a delivery tag twice, or on another channel, is a protocol error that closes the channel.",
     ],
@@ -358,7 +358,7 @@ export const CHAPTERS_PART_1: Chapter[] = [
       "Compare the outcome for each combination using the tabs.",
     ],
     technical: [
-      "**Queue durability** (`durable=True` at declaration) means the queue *definition* survives a restart. A transient (non-durable) queue is deleted on restart, along with its contents.",
+      "**Queue durability** (`durable=True` at declaration) means the queue **definition** survives a restart. A transient (non-durable) queue is deleted on restart, along with its contents.",
       "**Message persistence** (`delivery_mode=2`, \"persistent\") asks the broker to store the message on disk. It only helps if the queue is durable. Quorum queues store all messages durably regardless of delivery mode.",
       "**Declaration compatibility:** re-declaring an existing queue with different properties (e.g. `durable=False` when it exists as durable) fails with `PRECONDITION_FAILED` (406) and closes the channel. Declare queues identically everywhere, or manage them centrally.",
       "**Publisher confirms** (`confirm.select`): the broker acks each publication once it has taken responsibility — routed to queues and, for persistent messages in durable queues, written to disk (or replicated to a quorum). Unroutable messages are confirmed once the broker determines there's no route (returned first if `mandatory`).",
